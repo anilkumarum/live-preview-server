@@ -1,0 +1,19 @@
+{
+	"name": "preview-server",
+	"private": "true",
+	"version": "1.0.0",
+	"description": "live-preview-server",
+	"author": "anilkumarum",
+	"license": "GPL-3.0-only",
+	"main": "out/server.mjs",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "node --watch server.mjs",
+		"bundle": "esbuild ./server.mjs --allow-overwrite --bundle --minify --outdir=out --format=esm --platform=node"
+	},
+	"dependencies": {
+		"css-refresher": "file:../css-refresher",
+		"html-refresher": "file:../html-refresher"
+	}
+}

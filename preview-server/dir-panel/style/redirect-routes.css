@@ -1,0 +1,88 @@
+:host {
+    display: block;
+    padding: 0.4em;
+    border-radius: 0 0 0.4em 0.4em;
+    background-color: var(--section-bgc);
+}
+
+.redirect-route {
+    margin-top: 0.6em;
+    margin-inline: 0.6em;
+    contain: paint;
+    border-radius: 0.4em;
+
+    &[open] {
+        &>summary::before {
+            content: url(../assets/drop-down.svg);
+        }
+    }
+
+    & summary {
+        display: flex;
+        align-items: center;
+        padding: 0.1em 0.4em;
+        border: var(--border);
+        border-radius: 0.4em;
+
+        &::before {
+            content: url(../assets/chevron-right.svg);
+            margin-left: -0.3em;
+        }
+
+        & div {
+            width: 90%;
+        }
+    }
+
+    & .redirect-path-list {
+        --pd-left: 2.5em;
+        --vrt-stem-left: 0.5em;
+        padding-left: var(--pd-left);
+        margin-block: 0;
+        position: relative;
+
+        &::before {
+            --top: -0.66em;
+            content: " ";
+            position: absolute;
+            height: calc(100% + var(--top) - 3px);
+            width: 2px;
+            background-color: var(--stem-clr);
+            left: var(--vrt-stem-left);
+            top: var(--top);
+
+        }
+
+        & li {
+            list-style-type: none;
+            position: relative;
+            margin-top: 0.6em;
+            padding: 0.3em;
+            border: var(--border);
+            border-radius: 0.4em;
+            background-color: whitesmoke;
+
+
+            &::before {
+                content: " ";
+                position: absolute;
+                height: 2px;
+                width: calc(var(--pd-left) - var(--vrt-stem-left));
+                background-color: var(--stem-clr);
+                top: 1em;
+                left: calc(var(--vrt-stem-left) - var(--pd-left));
+                z-index: -1;
+                border-radius: 0.5em;
+            }
+
+            & input {
+                width: 94%;
+                font-size: 1rem;
+            }
+
+            & svg {
+                height: 1.8em;
+            }
+        }
+    }
+}

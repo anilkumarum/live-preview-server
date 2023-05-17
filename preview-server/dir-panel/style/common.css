@@ -1,0 +1,45 @@
+svg {
+    height: 2em;
+    vertical-align: middle;
+    fill: var(--icon-clr);
+    cursor: pointer;
+}
+
+input[type=text] {
+    border: var(--border);
+    border-radius: 4px;
+    background-color: var(--input-bgc);
+    color: var(--txt-clr);
+    padding: 0.4em 0.5em;
+    font-family: inherit;
+}
+
+.prime-btn {
+    box-shadow: var(--card);
+    background-color: #06f;
+    border-radius: 0.4em;
+    padding: 0.4em 0.8em;
+    border: none;
+    color: #fff;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+
+    & svg {
+        fill: white;
+    }
+}
+
+.outline-btn {
+    border-radius: 0.4em;
+    border: 1px solid grey;
+    padding: 0.4em 0.8em;
+    text-align: center;
+    background-color: #f2f2f2;
+}
+
+@media (max-width:800px) {
+    :root {
+        --box-mgi: 0;
+    }
+}

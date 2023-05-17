@@ -1,0 +1,114 @@
+:root {
+    --card: 0 1px 4px rgb(0, 0, 0, 0.12), 0 1px 2px rgb(0, 0, 0, 0.24);
+    --main-clr: hsl(289, 85%, 34%);
+    --border: 1.6px solid #ccc;
+    --bg-bgc: hsl(0, 0%, 94%);
+    --txt-clr: black;
+    --input-bgc: #fff;
+    --menu-bgc: #fff;
+    --header-bgc: whitesmoke;
+    --section-bgc: #fff;
+    --dialog-bgc: #fff;
+    --stem-clr: hsl(0, 0%, 70%);
+    --box-mgi: 10%;
+    --path-hvr-bgc: whitesmoke;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --card: 0 1px 4px rgba(200, 200, 200, 0.2), 0 1px 2px rgba(200, 200, 200, 0.3);
+        --bg-bgc: hsl(0, 0%, 6%);
+        --border: 1.6px solid rgb(180, 180, 180);
+        --export-bgc: hsl(0, 0%, 14%);
+        --edit-toolbox-clr: hsl(0, 0%, 14%);
+        --txt-clr: #bdc1c6;
+        --icon-clr: white;
+        --input-bgc: hsl(0, 0%, 25%);
+        --tool-bar-bgc: hsl(0, 0%, 11%);
+        --dialog-bgc: hsl(0, 0%, 16%);
+        --upload-box: hsl(0, 0%, 22%);
+        --menu-bgc: hsl(0, 0%, 18%);
+        --header-bgc: hsl(0, 0%, 18%);
+        --section-bgc: hsl(0, 0%, 12%);
+        --action-btn-bgc: hsl(0, 0%, 24%);
+        --path-hvr-bgc: hsl(0, 0%, 26%);
+        --toast-bgc: #333;
+        --toast-txt: rgb(255, 208, 0);
+    }
+
+}
+
+* {
+    box-sizing: border-box;
+}
+
+*::-webkit-scrollbar {
+    width: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    font-family: BlinkMacSystemFont, Segoe UI, Roboto, "Fira Sans", Ubuntu, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeSpeed;
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--txt-clr);
+    background-color: var(--bg-bgc, whitesmoke);
+}
+
+main {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    row-gap: 1em;
+
+    & .redirect-routes {
+        width: calc(100% - var(--box-mgi)*2);
+        margin-left: var(--box-mgi);
+        border: var(--border);
+        border-radius: 0.4em;
+
+        & header {
+            background-color: var(--header-bgc);
+            padding: 0.4em;
+            border-radius: 0.4em 0.4em 0 0;
+            box-shadow: var(--card);
+            border-bottom: var(--border);
+        }
+    }
+
+    & .path-tree-box {
+        width: calc(100% - var(--box-mgi)*2);
+        margin-left: var(--box-mgi);
+        border: var(--border);
+        border-radius: 0.4em;
+
+        & header {
+            padding: 0.4em;
+            display: flex;
+            box-shadow: var(--card);
+            border-radius: 0.4em 0.4em 0 0;
+            background-color: var(--header-bgc);
+            border-bottom: var(--border);
+
+            & input {
+                width: 90%;
+                border-radius: 0.4em 0 0 0.4em;
+                margin-left: 0.4em;
+            }
+
+            & button {
+                border-radius: 0 0.4em 0.4em 0;
+            }
+        }
+    }
+}

@@ -1,0 +1,183 @@
+{
+	"name": "live-preview-server",
+	"displayName": "Live Preview Server",
+	"version": "0.0.1",
+	"description": "dependency free native nodejs live preview server. embedded live html preview. lightweight and ultra fast",
+	"publisher": "anilkumarum",
+	"license": "GPL-3.0-only",
+	"icon": "logo.jpeg",
+	"galleryBanner": {
+		"color": "#C80000",
+		"theme": "dark"
+	},
+	"preview": true,
+	"bugs": {
+		"url": "https://github.com/anilkumarum/live-preview-server/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/anilkumarum/live-preview-server"
+	},
+	"author": {
+		"name": "anilkumarum",
+		"url": "https://github.com/anilkumarum"
+	},
+	"capabilities": {
+		"virtualWorkspaces": false,
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "Live Preview runs a server to host workspace files."
+		}
+	},
+	"engines": {
+		"vscode": "^1.78.2"
+	},
+	"categories": [
+		"Other"
+	],
+	"keywords": [
+		"html",
+		"preview",
+		"live",
+		"browser",
+		"reload",
+		"refresh",
+		"live server",
+		"livepreview"
+	],
+	"main": "vscode-live-preview/out/extension.js",
+	"activationEvents": [
+		"onLanguage:html",
+		"onLanguage:css",
+		"onLanguage:js"
+	],
+	"contributes": {
+		"commands": [
+			{
+				"command": "livePreviewServer.start.inlinePreview",
+				"title": "show preview",
+				"icon": "$(open-preview)"
+			},
+			{
+				"command": "livePreviewServer.start.openBrowser",
+				"title": "start preview in default browser"
+			},
+			{
+				"command": "livePreviewServer.start.chromeBrowser",
+				"title": "start preview in chrome browser"
+			},
+			{
+				"command": "livePreviewServer.start.firefoxBrowser",
+				"title": "start preview in firefox browser"
+			},
+			{
+				"command": "livePreviewServer.start.server",
+				"title": "start live preview server"
+			},
+			{
+				"command": "livePreviewServer.close.server",
+				"title": "close live preview server"
+			}
+		],
+		"menus": {
+			"editor/title": [
+				{
+					"command": "livePreviewServer.start.inlinePreview",
+					"when": "editorLangId == html && !notebookEditorFocused",
+					"group": "navigation"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "livePreviewServer.start.inlinePreview",
+				"key": "alt+L alt+I",
+				"when": "editorTextFocus",
+				"mac": "cmd+L cmd+I"
+			},
+			{
+				"command": "livePreviewServer.start.openBrowser",
+				"key": "alt+L alt+B",
+				"when": "editorTextFocus",
+				"mac": "cmd+L cmd+B"
+			}
+		],
+		"configuration": {
+			"title": "Live Preview",
+			"properties": {
+				"livePreviewServer.refreshOnChange": {
+					"type": "boolean",
+					"default": true,
+					"description": "toggle live refresh on change"
+				},
+				"livePreviewServer.customElementHMR": {
+					"type": "boolean",
+					"default": false,
+					"description": "toggle hmr on custom elements"
+				},
+				"livePreviewServer.defaultBrowser": {
+					"enum": [
+						"Chrome",
+						"Firefox",
+						"Default"
+					],
+					"default": "Default",
+					"description": "change default browser"
+				},
+				"livePreviewServer.httpHeaders": {
+					"type": "object",
+					"default": {
+						"Accept-Ranges": "bytes"
+					},
+					"description": "add own custom http headers"
+				},
+				"livePreviewServer.updateBrowserPath": {
+					"type": "object",
+					"default": {
+						"Chrome": "chrome",
+						"Firefox": "firefox"
+					},
+					"description": "add or edit browser path"
+				},
+				"livePreviewServer.ChromeDebuggingAttachment": {
+					"type": [
+						"boolean"
+					],
+					"default": false,
+					"description": "Enable Chrome Debugging Attachment to Live Server at Debuging Port 9222.\n NOTE: You have to install 'Debugger for Chrome' \nIf the value is true, Select 'Attach to Chrome' from Debug Window to start debugging. \n\n CAUTION: If it is true, 'Launch Chrome against localhost' may not work."
+				},
+				"livePreviewServer.serverPort": {
+					"type": [
+						"number"
+					],
+					"default": 3300,
+					"minimum": 0,
+					"maximum": 65535,
+					"description": "Set Custom Port Number of Live Server. Set 0 if you want random port."
+				}
+			}
+		},
+		"taskDefinitions": [
+			{
+				"type": "Live Preview Server",
+				"properties": {
+					"workspacePath": {
+						"type": "string",
+						"description": "Live Preview Server task"
+					}
+				}
+			}
+		]
+	},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"bundle": "esbuild ./vscode-live-preview/src/extension.js --allow-overwrite --bundle --minify --outfile=./vscode-live-preview/out/extension.js --external:vscode --external:preview-server --format=cjs --platform=node"
+	},
+	"devDependencies": {
+		"@types/node": "^16.18.25",
+		"@types/vscode": "^1.78.0"
+	},
+	"dependencies": {
+		"preview-server": "file:preview-server"
+	}
+}

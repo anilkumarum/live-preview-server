@@ -1,0 +1,14 @@
+{
+	"name": "css-refresher",
+	"version": "1.0.0",
+	"description": "css live refresh while typing",
+	"main": "index.mjs",
+	"author": "anilkumarum",
+	"type": "module",
+	"scripts": {
+		"test": "node --test",
+		"dev": "node index.js"
+	},
+	"keywords": [],
+	"license": "GPL-3.0-only"
+}

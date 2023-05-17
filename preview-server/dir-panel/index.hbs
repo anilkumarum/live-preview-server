@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory panel</title>
+    <link rel="stylesheet" href="/dir-panel/style/base.css">
+    <link rel="stylesheet" href="/dir-panel/style/common.css">
+</head>
+
+<body>
+    <header style="height: 2em;"></header>
+
+    <main>
+        <section class="redirect-routes">
+            <header>
+                <hp-icon pt="routes"></hp-icon>
+                <span>Set Redirect routes</span>
+            </header>
+            <redirect-route-list></redirect-route-list>
+        </section>
+
+        <section class="path-tree-box">
+            <header>
+                <hp-icon pt="dir-tree"></hp-icon>
+                <input type="text" id="tree-route">
+                <button class="prime-btn">Go <hp-icon pt="open-link"></hp-icon> </button>
+            </header>
+            <path-tree></path-tree>
+        </section>
+    </main>
+    <script type="module" src="/dir-panel/main.js"></script>
+
+</body>
+
+</html>

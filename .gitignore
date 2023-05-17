@@ -1,0 +1,6 @@
+**/node_modules
+**/out
+**/.TODO
+**/samples
+**/.vscode
+live-preview-server-**

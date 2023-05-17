@@ -1,0 +1,117 @@
+:host {
+    display: block;
+    padding: 0.4em;
+    border-radius: 0 0 0.4em 0.4em;
+    background-color: var(--section-bgc);
+}
+
+ul {
+    --pd-left: 2.5em;
+    --vrt-stem-left: 0.5em;
+    padding-left: var(--pd-left);
+    margin-block: 0;
+    position: relative;
+    isolation: isolate;
+
+    &::before {
+        content: " ";
+        position: absolute;
+        height: 98.6%;
+        width: 2px;
+        background-color: var(--stem-clr);
+        left: var(--vrt-stem-left);
+        top: -0.6em;
+    }
+
+    &:hover::before {
+        background-color: red;
+    }
+
+    & li {
+        list-style-type: none;
+        position: relative;
+        margin-top: 0.6em;
+
+        &::before {
+            content: " ";
+            position: absolute;
+            height: 2px;
+            width: calc(var(--pd-left) - var(--vrt-stem-left));
+            background-color: var(--stem-clr);
+            top: 0.8em;
+            left: calc(var(--vrt-stem-left) - var(--pd-left));
+            z-index: -1;
+        }
+
+        &:hover::before {
+            background-color: red;
+        }
+    }
+
+}
+
+details {
+
+    &[open] {
+        &>summary {
+            &>.path-item::before {
+                content: url(../assets/drop-down.svg);
+            }
+
+            & svg path {
+                d: path('M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z')
+            }
+        }
+
+        &>ul {
+            animation: expand-down 300ms ease-out normal;
+        }
+    }
+
+    & summary {
+        list-style-type: none;
+
+
+        & .path-item::before {
+            content: url(../assets/chevron-right.svg);
+            margin-left: -0.3em;
+        }
+    }
+
+    & ul {
+        transform-origin: top;
+    }
+
+}
+
+.path-item {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.1em 0.2em;
+    border: var(--border);
+    border-radius: 0.4em;
+
+    & span {
+        margin-left: 0.4em;
+        padding-right: 0.2em;
+    }
+
+    &:hover {
+        background-color: var(--path-hvr-bgc);
+    }
+}
+
+
+svg {
+    height: 1.2em;
+}
+
+@keyframes expand-down {
+    from {
+        scale: 1 0;
+    }
+
+    to {
+        scale: 1 1;
+    }
+}

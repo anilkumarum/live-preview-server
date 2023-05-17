@@ -1,0 +1,14 @@
+{
+	"name": "html-refresher",
+	"version": "1.0.0",
+	"description": "html live refresh while typing",
+	"author": "anilkumarum",
+	"main": "index.mjs",
+	"type": "module",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "node index.js"
+	},
+	"keywords": [],
+	"license": "GPL-3.0-only"
+}
