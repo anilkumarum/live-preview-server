@@ -35,6 +35,7 @@ export function splitExt(filepath) {
 }
 
 export const docExtension = new Set([".html", ".stml", ".htm", ".htmlx"]);
+export const docLangId = new Set(["html", "stml", "htm", "htmlx"]);
 
 /**@param {string} cwd, @param {Map<string,string>} fileExtMap*/
 export async function createFileExtMap(cwd, fileExtMap) {

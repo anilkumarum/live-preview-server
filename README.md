@@ -1,6 +1,10 @@
 Dependency free native nodejs live preview server
 
 - Updates your files instantly while typing on your keyboard
+- Don't need to live vscode. Embedded inline preview
+- Url path completion intellisense in embedded preview
+- file extension don't require in url
+- link multiple custom routes on any file url
 
 ⚠️ WARNING: This extension is still under development! ⚠️
 

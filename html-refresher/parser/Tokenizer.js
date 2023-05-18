@@ -2,7 +2,7 @@ import { CharCode, QuoteType, Sequence, State } from "../utils/html-enums.js";
 import { EventEmitter } from "../utils/EventEmitter.js";
 
 function isWhitespace(code) {
-	return code === CharCode.Space || code === CharCode.LineBreak;
+	return code === CharCode.Space || code === CharCode.LineBreak || code === CharCode.Tab;
 }
 
 function isEndOfTagSection(code) {

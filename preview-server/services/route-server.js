@@ -36,7 +36,7 @@ export default class RouteServer {
 			const fstat = await stat(this.cwd + urlPath).catch((err) => errorPage404(urlPath, res));
 			if (!fstat) return;
 			if (fstat.isDirectory()) {
-				const dirPanelPath = this.extensionPath + "/dir-panel/index.hbs";
+				const dirPanelPath = path.join(this.extensionPath, "/dir-panel/index.hbs");
 				return serveFile(dirPanelPath, res);
 			}
 			hasExt(urlPath) || (fileExt = this.docFileExtMap.get(urlPath));

@@ -92,21 +92,32 @@ export class NodelinkList {
 		node.end -= offset;
 		node.attributes && this.#shiftAttrBackward(node.attributes, offset, attrIdx);
 
-		let nxtNode = node._next;
-		while (nxtNode) {
-			nxtNode.start -= offset;
-			nxtNode.attributes && this.#shiftAttrBackward(nxtNode.attributes, offset);
-			nxtNode.end -= offset;
-			nxtNode = nxtNode._next;
+		let prevNode = node._previous;
+		while (prevNode) {
+			prevNode.start -= offset;
+			prevNode.attributes && this.#shiftAttrBackward(prevNode.attributes, offset);
+			prevNode.end -= offset;
+			prevNode = prevNode._previous;
 		}
 	}
 
 	#shiftAttrBackward(attributes, offset, attrIdx = 0) {
-		/* for (let index = attrIdx; index < attributes.length; index++) {
+		for (let index = attrIdx; index < attributes.length; index++) {
 			const attr = attributes[index];
 			attr.start -= offset;
 			attr.end -= offset;
-		} */
+		}
+	}
+
+	/**@protected @param {Element|TxtNode} crtNode, @param {number} rangeOffset, @param {number} shift*/
+	shiftParent(crtNode, rangeOffset, shift) {
+		if (crtNode.type === Node.ELEMENT && crtNode.end > rangeOffset) crtNode.end += shift;
+
+		let prevNode = crtNode._previous;
+		while (prevNode) {
+			if (prevNode.type === Node.ELEMENT && prevNode.end > rangeOffset) prevNode.end += shift;
+			prevNode = prevNode._previous;
+		}
 	}
 
 	/**@param {number} position*/

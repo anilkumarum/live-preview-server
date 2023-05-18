@@ -111,7 +111,7 @@ export class CssRefresher extends CssUpdater {
 			}
 		}
 
-		return this.#formCrtRuleData(change, crtRule,);
+		return this.#formCrtRuleData(change, crtRule);
 	}
 
 	/** @param {change} change, @param {RegExp} regrex, @returns {{text:string,start:number}} */
@@ -120,4 +120,3 @@ export class CssRefresher extends CssUpdater {
 		return { text: this.document.getText(range), start: this.document.offsetAt(range.start) };
 	}
 }
-

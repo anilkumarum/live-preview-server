@@ -1,6 +1,6 @@
 import HTMLParser from "./Parser.js";
 import { Attribute, Element, TxtNode } from "./node.js";
-import { NodelinkList } from "./nodelinkList.js";
+import { NodelinkList, State } from "./nodelinkList.js";
 
 const attrRx = new RegExp(/\s([^=]+)="([^"]+)/);
 
@@ -17,9 +17,11 @@ export class HtmlUpdater extends NodelinkList {
 	insertNewElems(elemData, node, state) {
 		this.crtNode = node;
 		this.parser.parse(elemData.text, elemData.start);
+		const offset = elemData.text.length;
+		this.shiftParent(node, elemData.start, elemData.text.length);
 		if (this.crtNode._next) {
-			this.crtNode._next.start += elemData.text.length;
-			this.shiftForward(this.crtNode._next, elemData.text.length);
+			this.crtNode._next.start += offset;
+			this.shiftForward(this.crtNode._next, offset);
 		}
 		return this.patchNodes.length > 0
 			? { action: "insertNewNodes", patchNodes: this.patchNodes, nodeId: node.id, state }
@@ -27,11 +29,16 @@ export class HtmlUpdater extends NodelinkList {
 	}
 
 	/**@protected @param {Element} node, @param {import("../htmlRefresher.js").change} change*/
-	insertNewTxtNode(node, change) {
+	insertNewTxtNode(node, change, state) {
 		this.crtNode = node;
-		const end = change.text.length + change.rangeOffset + 1;
-		const newNode = new TxtNode(change.text, change.rangeOffset + 1, end);
+		const end = change.text.length + change.rangeOffset;
+		const newNode = new TxtNode(change.text, change.rangeOffset, end);
 		this.add(newNode, false); //patch->false
+
+		const offset = change.text.length - change.rangeLength;
+		state === State.InElement && (node.end += offset);
+		this.shiftForward(node._next, offset);
+		this.shiftParent(node, change.rangeOffset, offset);
 	}
 
 	//String.prototype.replaceAt
@@ -45,6 +52,7 @@ export class HtmlUpdater extends NodelinkList {
 	/**@protected  @param {TxtNode} curNode, @param {import("../htmlRefresher.js").change} change, @returns {string}*/
 	updateTxtNode(curNode, change) {
 		this.#updateProp(curNode, "nodeValue", change);
+		this.shiftParent(curNode, change.rangeOffset, change.text.length - change.rangeLength);
 		return curNode.nodeValue;
 	}
 

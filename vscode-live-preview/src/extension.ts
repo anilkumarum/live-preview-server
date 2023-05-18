@@ -7,7 +7,7 @@ import { findHTMLDocument } from "./utils/htmldoc.js";
 const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.path;
 
 export async function activate(context: vscode.ExtensionContext) {
-	const port = 3300;
+	let port = 2200;
 	const disposableBrowser = vscode.commands.registerCommand("livePreviewServer.start.openBrowser", async () => {
 		const docPath = await startPreviewServer();
 		openBrowser("default", `${port}${docPath}`);
@@ -35,7 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	const disposablePanel = vscode.commands.registerCommand("livePreviewServer.start.inlinePreview", async () => {
 		const docPath = await startPreviewServer();
-		InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder);
+		InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder, port);
 	});
 	context.subscriptions.push(disposableBrowser);
 	context.subscriptions.push(disposableChrome);
@@ -44,11 +44,13 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposablePanel);
 
 	async function startPreviewServer() {
-		const { PreviewServer } = await import("preview-server");
+		const { PreviewServer } = await import("../../preview-server/server.mjs");
 		const isLiveRefresh = true;
 		const previewServer = new PreviewServer(workspaceFolder, context.extensionPath, isLiveRefresh);
+		port = await previewServer.startServer(port).catch((err) => console.error(err));
 		const document = await findHTMLDocument().catch((err) => console.error(err));
 		await new Promise((r) => setTimeout(r, 100));
+
 		if (!document) return console.error("docPath not available");
 		previewServer.onTxtDocumentOpen(document);
 

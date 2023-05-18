@@ -1,8 +1,8 @@
 import { HtmlUpdater } from "./parser/htmlUpdater.js";
-import { Node, Element, TxtNode, Attribute } from "./parser/node.js";
+import { Node, Element, TxtNode } from "./parser/node.js";
 import { State } from "./parser/nodelinkList.js";
 
-const openTagRx = new RegExp(/<[a_z]>/);
+const openTagRx = new RegExp(/<[a-z]+>/);
 const attrTxtRx = new RegExp(/\s[^=]+=/);
 
 /**
@@ -44,16 +44,17 @@ export default class HtmlRefresher extends HtmlUpdater {
 
 	/**@param {change} change, @returns {refreshData|null}*/
 	getElemDataAtOffset(change) {
-		const { rangeOffset, text } = change;
-
-		if (text === "\n" || text === "\t") {
+		const { rangeOffset, rangeLength, text } = change;
+		/*if (text.charCodeAt(0) <= 13) {
 			const node = this.getNodeAtPosition(rangeOffset);
-			node && this.shiftForward(node, text.length);
+			node && this.shiftForward(node, text.length), this.shiftParent(node, change.rangeOffset, text.length);
 			return null;
-		}
+		} */
+
 		const node = this.getNodeAtPosition(rangeOffset);
+
 		if (!node) {
-			console.error("node not found at");
+			console.error("node not found at " + rangeOffset);
 			return null;
 		}
 		const isElem = node.type === Node.ELEMENT;
@@ -63,17 +64,17 @@ export default class HtmlRefresher extends HtmlUpdater {
 			return null;
 		}
 		if (!text) return this.#removeNodeAndGetData(change, node, state, isElem);
-
 		if (text.includes(">")) {
 			//create element
+			rangeLength === 0 || this.updateTxtNode(node, { text: "", rangeLength, rangeOffset });
 			const elemData = this.#getTxtByRegInDoc(change, openTagRx);
-			elemData.text = elemData.text + text.slice(text.indexOf(">"));
+			elemData.text = elemData.text + text.slice(text.indexOf(">") + 1);
 			return this.insertNewElems(elemData, node, state);
 		}
 		if (text.includes("=")) {
 			//create attribute
 			const attrTxt = this.#getTxtByRegInDoc(change, attrTxtRx);
-			const attrData = attrTxt + text.slice(text.indexOf("="));
+			const attrData = attrTxt + text.slice(text.indexOf("=") + 1);
 			return this.addNewAttribute(attrData, node);
 		}
 

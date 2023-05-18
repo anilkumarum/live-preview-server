@@ -1,8 +1,9 @@
-import { createServer, ServerResponse } from "node:http";
+import { createServer, Server, ServerResponse } from "node:http";
 import { clr } from "./utils/color.js";
 import RouteServer from "./services/route-server.js";
-import { dirname } from "node:path";
-import { docExtension } from "./utils/file-path.js";
+import { docLangId } from "./utils/file-path.js";
+import { join } from "node:path";
+import { getNextOpenPort } from "./utils/port.js";
 
 /**
  * @typedef change
@@ -43,23 +44,33 @@ const created = (port) => console.info(clr["green"], `preview-server ready at ${
 
 let HtmlRefresher, CssRefresher;
 async function loadRefresher() {
-	HtmlRefresher = (await import("html-refresher")).HtmlRefresher;
-	CssRefresher = (await import("css-refresher")).CssRefresher;
+	HtmlRefresher = (await import("../html-refresher/index.mjs")).HtmlRefresher;
+	CssRefresher = (await import("../css-refresher/index.mjs")).CssRefresher;
 }
 
 export class PreviewServer extends RouteServer {
+	/** @type {Server}*/
 	#server;
 	/** @type {ServerResponse}*/
 	#res;
 
-	/**@param {string}cwd, @param {string}extensionPath, @param {number}port */
-	constructor(cwd, extensionPath, isLiveFresh = true, port = 3300) {
+	/**@param {string}cwd, @param {string}extensionPath */
+	constructor(cwd, extensionPath, isLiveFresh = true) {
 		super(cwd);
-		this.#server = createServer().listen(port, created.bind(null, port));
-		this.extensionPath = dirname(extensionPath) + "/preview-server";
-		this.#server.on("request", this.#onRequest);
+		this.extensionPath = join(extensionPath, "preview-server");
 		isLiveFresh && loadRefresher();
 		this.liveRefresher = new Map();
+	}
+
+	/** @param {number} port*/
+	async startServer(port) {
+		return new Promise((resolve, reject) => {
+			// port = await getNextOpenPort(port);
+			this.#server = createServer().listen(port, created.bind(null, port));
+			this.#server.on("request", this.#onRequest);
+			this.#server.once("error", () => reject("cannot start server at port " + port));
+			this.#server.once("listening", () => resolve(port));
+		});
 	}
 
 	/** @type {import("node:http").RequestListener} */
@@ -81,7 +92,7 @@ export class PreviewServer extends RouteServer {
 
 	/** @param {document} textDoc*/
 	onTxtDocumentOpen(textDoc) {
-		if (textDoc.languageId === "html") this.liveRefresher.set(textDoc.fileName, new HtmlRefresher(textDoc));
+		if (docLangId.has(textDoc.languageId)) this.liveRefresher.set(textDoc.fileName, new HtmlRefresher(textDoc));
 		else if (textDoc.languageId === "css") this.liveRefresher.set(textDoc.fileName, new CssRefresher(textDoc));
 	}
 

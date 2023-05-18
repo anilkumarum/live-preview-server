@@ -1,6 +1,7 @@
-// import { createServer, ServerResponse } from "node:http";
+import { createServer, ServerResponse } from "node:http";
+
 /** @param {number} port */
-/* async function isPortAvailable(port) {
+async function isPortAvailable(port) {
 	return new Promise((resolve, reject) => {
 		let server = createServer();
 		server.once("error", (err) => {
@@ -20,7 +21,8 @@
 	});
 }
 
-const getNextOpenPort = async (startFrom = 2222) => {
+/** @param {number} startFrom,@returns {number} */
+export async function getNextOpenPort(startFrom = 2200) {
 	let openPort = null;
 	while (startFrom < 65535 || !!openPort) {
 		if (await isPortAvailable(startFrom)) {
@@ -30,7 +32,4 @@ const getNextOpenPort = async (startFrom = 2222) => {
 		startFrom++;
 	}
 	return openPort;
-}; */
-
-
-
+}

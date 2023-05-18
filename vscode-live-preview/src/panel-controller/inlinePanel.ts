@@ -15,7 +15,7 @@ export class InlinePanel {
 	#extensionUri: vscode.Uri;
 	static column: vscode.ViewColumn = vscode.ViewColumn.Two;
 
-	static openPanel(extensionUri: vscode.Uri, iframeUrl, cwd: string) {
+	static openPanel(extensionUri: vscode.Uri, iframeUrl: string, cwd: string, port: number) {
 		if (InlinePanel.currentPanel) {
 			InlinePanel.currentPanel.#panel.reveal(InlinePanel.column);
 			return;
@@ -29,12 +29,12 @@ export class InlinePanel {
 		InlinePanel.currentPanel = new InlinePanel(panel, extensionUri);
 
 		//convert absolutepath into webview uri path
-		const cssFile = vscode.Uri.joinPath(extensionUri, "panel-ui", "address-bar.css");
-		const jsFile = vscode.Uri.joinPath(extensionUri, "panel-ui", "address-bar.js");
+		const cssFile = vscode.Uri.joinPath(extensionUri, "vscode-live-preview", "panel-ui", "address-bar.css");
+		const jsFile = vscode.Uri.joinPath(extensionUri, "vscode-live-preview", "panel-ui", "address-bar.js");
 		const cssSrc = panel.webview.asWebviewUri(cssFile);
 		const jsSrc = panel.webview.asWebviewUri(jsFile);
 		// set HTML content
-		panel.webview.html = getHTMLContent(jsSrc, cssSrc, iframeUrl);
+		panel.webview.html = getHTMLContent(jsSrc, cssSrc, iframeUrl, port);
 		//navigation controller
 		new WebComm(panel.webview, cwd);
 	}

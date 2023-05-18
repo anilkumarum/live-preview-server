@@ -55,28 +55,28 @@
 		"commands": [
 			{
 				"command": "livePreviewServer.start.inlinePreview",
-				"title": "show preview",
+				"title": "show inline preview",
 				"icon": "$(open-preview)"
 			},
 			{
 				"command": "livePreviewServer.start.openBrowser",
-				"title": "start preview in default browser"
+				"title": "Start preview in default browser"
 			},
 			{
 				"command": "livePreviewServer.start.chromeBrowser",
-				"title": "start preview in chrome browser"
+				"title": "Start preview in Chrome browser"
 			},
 			{
 				"command": "livePreviewServer.start.firefoxBrowser",
-				"title": "start preview in firefox browser"
+				"title": "Start preview in firefox browser"
 			},
 			{
 				"command": "livePreviewServer.start.server",
-				"title": "start live preview server"
+				"title": "Start live preview server"
 			},
 			{
 				"command": "livePreviewServer.close.server",
-				"title": "close live preview server"
+				"title": "Close live preview server"
 			}
 		],
 		"menus": {
@@ -150,7 +150,7 @@
 					"type": [
 						"number"
 					],
-					"default": 3300,
+					"default": 2200,
 					"minimum": 0,
 					"maximum": 65535,
 					"description": "Set Custom Port Number of Live Server. Set 0 if you want random port."
@@ -176,8 +176,5 @@
 	"devDependencies": {
 		"@types/node": "^16.18.25",
 		"@types/vscode": "^1.78.0"
-	},
-	"dependencies": {
-		"preview-server": "file:preview-server"
 	}
 }
