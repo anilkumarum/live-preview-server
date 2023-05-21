@@ -2,30 +2,32 @@ import HTMLParser from "./Parser.js";
 import { Attribute, Element, TxtNode } from "./node.js";
 import { NodelinkList, State } from "./nodelinkList.js";
 
-const attrRx = new RegExp(/\s([^=]+)="([^"]+)/);
+const attrRx = new RegExp(/([^=]+)="([^"]+)/);
 
 export class HtmlUpdater extends NodelinkList {
+	/**@type {HTMLParser} */
+	#parser;
 	/** @param {string} buffer*/
 	constructor(buffer) {
 		super();
-		this.parser = new HTMLParser(this);
-		this.isParsedSuccess = this.parser.parse(buffer);
+		this.#parser = new HTMLParser(this);
+		this.isParsedSuccess = this.#parser.parse(buffer);
 	}
 
 	//parse elem str and insert node
 	/**@protected @param {{text:string,start:number}} elemData, @param {Element|TxtNode} node*/
-	insertNewElems(elemData, node, state) {
+	insertNewElems(elemData, node) {
 		this.crtNode = node;
-		this.parser.parse(elemData.text, elemData.start);
+		this.patchNodes.length = 0;
+		this.#parser.parse(elemData.text, elemData.start);
 		const offset = elemData.text.length;
-		this.shiftParent(node, elemData.start, elemData.text.length);
+		NodelinkList.shiftParent(node, elemData.start, elemData.text.length);
 		if (this.crtNode._next) {
 			this.crtNode._next.start += offset;
-			this.shiftForward(this.crtNode._next, offset);
+			this.shiftTree(this.crtNode._next, offset);
 		}
-		return this.patchNodes.length > 0
-			? { action: "insertNewNodes", patchNodes: this.patchNodes, nodeId: node.id, state }
-			: null;
+		if (this.patchNodes.length === 0) return null;
+		return this.patchNodes;
 	}
 
 	/**@protected @param {Element} node, @param {import("../htmlRefresher.js").change} change*/
@@ -37,8 +39,8 @@ export class HtmlUpdater extends NodelinkList {
 
 		const offset = change.text.length - change.rangeLength;
 		state === State.InElement && (node.end += offset);
-		this.shiftForward(node._next, offset);
-		this.shiftParent(node, change.rangeOffset, offset);
+		this.shiftTree(node._next, offset);
+		NodelinkList.shiftParent(node, change.rangeOffset, offset);
 	}
 
 	//String.prototype.replaceAt
@@ -46,13 +48,13 @@ export class HtmlUpdater extends NodelinkList {
 	#updateProp(curNode, prop, { rangeOffset, rangeLength, text }) {
 		const position = rangeOffset - curNode.start;
 		curNode[prop] = curNode[prop].replaceAt(position, rangeLength, text);
-		this.shiftTree(rangeLength, text.length, curNode);
+		this.shiftTree(curNode, text.length - rangeLength);
 	}
 
 	/**@protected  @param {TxtNode} curNode, @param {import("../htmlRefresher.js").change} change, @returns {string}*/
 	updateTxtNode(curNode, change) {
 		this.#updateProp(curNode, "nodeValue", change);
-		this.shiftParent(curNode, change.rangeOffset, change.text.length - change.rangeLength);
+		NodelinkList.shiftParent(curNode, change.rangeOffset, change.text.length - change.rangeLength);
 		return curNode.nodeValue;
 	}
 
@@ -66,7 +68,7 @@ export class HtmlUpdater extends NodelinkList {
 	updateElemAttribute(curElement, change) {
 		const { rangeOffset, rangeLength, text } = change;
 		curElement.attributes ??= [];
-		const attrIdx = this.getCrtAttrIndex(rangeOffset, curElement);
+		const attrIdx = NodelinkList.getCrtAttrIndex(rangeOffset, curElement);
 		if (attrIdx === -1) return;
 
 		const attribute = curElement.attributes[attrIdx];
@@ -80,11 +82,11 @@ export class HtmlUpdater extends NodelinkList {
 		if (text) {
 			attribute[prop] = attribute[prop].replaceAt(position, rangeLength, text);
 			attribute.end += text.length - rangeLength;
-			this.shiftForward(curElement, text.length - rangeLength, attrIdx + 1);
+			this.shiftTree(curElement, text.length - rangeLength, attrIdx + 1);
 		} else {
 			attribute[prop] = attribute[prop].replaceAt(position, rangeLength);
 			attribute.end -= rangeLength;
-			this.shiftBackward(curElement, rangeLength, attrIdx + 1);
+			this.shiftTree(curElement, -rangeLength, attrIdx + 1);
 		}
 		return { oldTxt, prop, data: attribute };
 	}

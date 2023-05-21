@@ -4,11 +4,14 @@
  * @type {object}
  * @property {string} action
  * @property {number} [nodeId]
+ * @property {number} [replaceTxtNodeId]
  * @property {number[]} [nodeIds]
+ * @property {refreshData[]} [siblingDataArr]
  * @property {string}[txtData]
  * @property {string}[tagName]
  * @property {object}[attribute]
  * @property {object}[patchNodes]
+ * @property {{relation:string,kinNodeId:number}}[relative]
  */
 
 /**
@@ -21,69 +24,117 @@
  * @property {string} sheetUrl
  * @property {string} [selector]
  * @property {object} [declarations]
- * @property {object} [declaration]
  * @property {array} [rmRulesData]
  * @property {string} [ruleTxt]
+ * @property {Array} [rmDeclarations]
  */
 
 /** @readonly @enum {Function}*/
 export const liveActions = {
 	insertNewNodes: insertNewNodes,
+	replaceSiblings: replaceSiblings,
 	updateTxtNode: updateTxtNode,
 	updateTagName: updateTagName,
 	updateAttrName: updateAttrName,
 	updateAttrValue: updateAttrValue,
 	removeNodes: removeNodes,
-	appendTxtNode: appendTxtNode,
 	addTxtNode: addTxtNode,
 	ruleSelector: updateRuleSelector,
 	addDeclaration: addDeclaration,
 	ruleDeclarations: updateRuleDeclarations,
 	removeRules: removeRules,
+	removeDeclarations: removeDeclarations,
 	insertRule: insertRule,
 };
 
 //>>>>>>>>>>>>>>>> HTMLElement Update >>>>>>>>>>>>>>>>>>>>>>
-/**@param {refreshData} updateData */
-function insertNewNodes(updateData) {
-	/**@type {HTMLElement} */
-	const domElem = livePreviewIds.get(updateData.nodeId)?.deref();
-	if (!domElem) return;
+/**@param {Array} patchNodes */
+function getNewNodesFrag(patchNodes) {
 	const docFrag = new DocumentFragment();
-	for (const nodeItem of updateData.patchNodes) {
+
+	const parentElemMap = new Map([[null, docFrag]]);
+	for (const nodeItem of patchNodes) {
+		//TODO insert nested elem
 		if (nodeItem.type === Node.TEXT_NODE) {
 			const txtNode = new Text(nodeItem.nodeValue);
-			docFrag.appendChild(txtNode);
+			parentElemMap.get(nodeItem.parentId).appendChild(txtNode);
 			setLpsNodeId(txtNode);
 		} else if (nodeItem.type === Node.ELEMENT_NODE) {
 			const newDomElem = document.createElement(nodeItem.tagName);
 			if (nodeItem.attributes) {
 				for (const attr of nodeItem.attributes) newDomElem.setAttribute(attr.name, attr.value);
 			}
-			docFrag.appendChild(newDomElem);
+			parentElemMap.get(nodeItem.parentId).appendChild(newDomElem);
 			setLpsNodeId(newDomElem);
+			parentElemMap.set(newDomElem.livePreviewId, newDomElem);
+			console.log(parentElemMap);
 		}
 	}
-	domElem.after(docFrag);
-}
-
-/**@param {number} nodeId, @param {string} txtData, @param {boolean} asSibling*/
-function createTxtNode(nodeId, txtData, asSibling) {
-	const domElem = livePreviewIds.get(nodeId)?.deref();
-	if (!domElem) return;
-	const txtNode = new Text(txtData);
-	setLpsNodeId(txtNode);
-	asSibling ? domElem.after(txtNode) : domElem.append(txtNode);
+	return docFrag;
 }
 
 /**@param {refreshData} updateData */
-function appendTxtNode(updateData) {
-	createTxtNode(updateData.nodeId, updateData.txtData, false);
+function insertNewNodes(updateData) {
+	const docFrag = getNewNodesFrag(updateData.patchNodes);
+	insetNodesIntoDomTree(updateData, docFrag);
+}
+
+/**@param {refreshData} updateData, @param {Text|DocumentFragment} nodeFrag */
+function insetNodesIntoDomTree(updateData, nodeFrag) {
+	if (updateData.relative) {
+		const kinDomElem = livePreviewIds.get(updateData.relative.kinNodeId)?.deref();
+		if (updateData.relative.relation === "Parent") kinDomElem.append(nodeFrag);
+		else if (updateData.relative.relation === "NextSibling")
+			kinDomElem.parentElement.insertBefore(nodeFrag, kinDomElem);
+		else if (updateData.relative.relation === "BeforeSibling") kinDomElem.after(nodeFrag);
+	} else {
+		if (updateData.replaceTxtNodeId) {
+			/**@type {HTMLElement} */
+			const domNode = livePreviewIds.get(updateData.replaceTxtNodeId)?.deref();
+			if (!domNode) return;
+			domNode.parentElement.replaceChild(nodeFrag, domNode);
+		} else {
+			const domElem = livePreviewIds.get(updateData.nodeId)?.deref();
+			if (!domElem) return;
+			domElem.prepend(nodeFrag);
+		}
+	}
+}
+
+/**@param {refreshData} updateData */
+function replaceSiblings(updateData) {
+	const domNode = livePreviewIds.get(updateData.nodeId)?.deref();
+	if (!domNode) return;
+
+	/**@type {Element} */
+	let sibling = domNode;
+	for (const sibData of updateData.siblingDataArr) {
+		switch (sibData.action) {
+			case "updateTxtNode":
+				sibling.nodeValue = sibData.txtData;
+				break;
+
+			case "insertNewNodes":
+				const docFrag = getNewNodesFrag(sibData.patchNodes);
+				sibling.after(docFrag);
+				sibling = sibling.nextElementSibling;
+				break;
+
+			case "addTxtNode":
+				const txtNode = new Text(sibData.txtData);
+				setLpsNodeId(txtNode);
+				sibling.after(txtNode);
+				sibling = sibling.nextElementSibling;
+				break;
+		}
+	}
 }
 
 /**@param {refreshData} updateData */
 function addTxtNode(updateData) {
-	createTxtNode(updateData.nodeId, updateData.txtData, true);
+	const txtNode = new Text(updateData.txtData);
+	setLpsNodeId(txtNode);
+	insetNodesIntoDomTree(updateData, txtNode);
 }
 
 /**@param {refreshData} updateData */
@@ -194,14 +245,33 @@ function removeRules(updateData) {
 	for (const ruleData of updateData.rmRulesData) {
 		ruleData.sheetUrl = updateData.sheetUrl;
 		const parentRule = getParentRule(ruleData);
-		parentRule.deleteRule(updateData.index);
+		parentRule.deleteRule(ruleData.index);
+	}
+}
+
+/**@param {ruleData} updateData */
+function removeDeclarations(updateData) {
+	const rule = getParentRule(updateData).cssRules[updateData.index];
+	if (!rule) return;
+
+	const styleMap = rule.styleMap;
+	for (const property of updateData.rmDeclarations) {
+		try {
+			styleMap.delete(property);
+		} catch (error) {
+			console.error(error.message);
+		}
 	}
 }
 
 /**@param {ruleData} updateData */
 function insertRule(updateData) {
 	const parentRule = getParentRule(updateData);
-	parentRule.insertRule(updateData.ruleTxt, updateData.index);
+	try {
+		parentRule.insertRule(updateData.ruleTxt, updateData.index);
+	} catch (error) {
+		console.error(error.message);
+	}
 }
 
 /** @type {CSSStyleSheet} */

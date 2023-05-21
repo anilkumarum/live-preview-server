@@ -26,10 +26,9 @@ export class CssUpdater extends RuleLinkList {
 		parentRule && this.parser.ruleStack.push(parentRule);
 		this.parser.parse(ruleData.ruleTxt, ruleData.start);
 		this.shiftForward(crtRule.cssRule._next, ruleData.ruleTxt.length);
-		//this.prettyPrint();
 		return {
 			action: "insertRule",
-			parentRule: crtRule.cssRule.parentRule,
+			parentRule: this.crtRule.parentRule,
 			index: this.crtRule.index,
 			ruleTxt: ruleData.ruleTxt.replaceAll(/\t/g, ""),
 		};
@@ -91,21 +90,28 @@ export class CssUpdater extends RuleLinkList {
 		declaration.value = value.trimStart().replace(/;$/, "");
 
 		const nxTDeclarationIdx = this.getNxtDeclarationIdxAfterOffset(cssRule.declarations, start);
-		cssRule.declarations.splice(nxTDeclarationIdx, 0, declaration);
+		nxTDeclarationIdx === -1
+			? cssRule.declarations.push(declaration)
+			: cssRule.declarations.splice(nxTDeclarationIdx, 0, declaration);
 		this.shiftForward(cssRule, declarationTxt.length, nxTDeclarationIdx);
-
-		return {
-			action: "addDeclaration",
-			parentRule: cssRule.parentRule,
-			index: cssRule.index,
-			declaration,
-		};
+		return declaration.value
+			? {
+					action: "addDeclaration",
+					parentRule: cssRule.parentRule,
+					index: cssRule.index,
+					declaration,
+			  }
+			: null;
 	}
 
 	/**@param {number} start, @param {number} end, @returns {{parentRule:number[],index:number}[]}*/
 	removeRuleInRange(start, end) {
 		let { cssRule: crtRule } = this.walkForwardUntil(start);
 		let rules = [];
+		if (crtRule.start >= start && crtRule.end <= end)
+			rules.push({ parentRule: crtRule.parentRule, index: crtRule.index });
+		if (!crtRule._next) return rules.length > 0 ? rules : null;
+
 		while (crtRule._next.start <= end) {
 			crtRule = crtRule._next;
 			if (crtRule.start >= start && crtRule.end <= end) {
@@ -116,6 +122,17 @@ export class CssUpdater extends RuleLinkList {
 		}
 
 		return rules.length > 0 ? rules : null;
+	}
+
+	/**@param {CssRule} crtRule, @param {import("../cssRefresher.js").change} change,*/
+	removeRuleDeclaration(crtRule, change) {
+		const start = change.rangeOffset,
+			end = change.rangeOffset + change.rangeLength;
+		const rmDeclarations = [];
+		for (const declaration of crtRule.declarations) {
+			if (declaration.start >= start && declaration.end <= end) rmDeclarations.push(declaration.property);
+		}
+		return rmDeclarations.length > 0 ? rmDeclarations : null;
 	}
 }
 

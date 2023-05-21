@@ -11,9 +11,12 @@ test
 css-refresher
 html-refresher
 **/samples
+**/.vscode
+**/.TODO
+**/__test__
 preview-server/utils
 preview-server/services
 preview-server/package.json
 preview-server/package-lock.json
 preview-server/server.mjs
-**/.TODO
+preview-server/test.js

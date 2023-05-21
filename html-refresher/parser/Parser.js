@@ -1,7 +1,6 @@
 import { Tokenizer } from "./Tokenizer.js";
-import { Attribute, Element, Node, TxtNode } from "./node.js";
+import { Attribute, Element, TxtNode } from "./node.js";
 import { HtmlUpdater } from "./htmlUpdater.js";
-import { voidElements } from "../utils/html-enums.js";
 
 export default class HTMLParser {
 	/**@type {Element[]} */
@@ -16,15 +15,16 @@ export default class HTMLParser {
 
 	/**@param {string} buffer, @param {number} [offset], @returns {boolean}*/
 	parse(buffer, offset) {
-		this.offset = offset;
+		this.isPatch = offset > 0;
 		const isSuccess = this.tokenizer.consume(buffer, offset);
+		this.#elemStack.length = 0; //BUG elemstack must zero after sucessfully parsed
 		return this.#elemStack.length !== 0 || isSuccess;
 	}
 
 	/** @param {string} tagName, @param {number} start */
 	#openNewElement(tagName, start) {
 		const element = new Element(tagName, start);
-		this.htmlUpdater.add(element, this.offset > 0);
+		this.htmlUpdater.add(element, this.isPatch, this.isPatch && this.#elemStack.at(-1)?.id);
 		this.#elemStack.push(element);
 	}
 
@@ -46,13 +46,12 @@ export default class HTMLParser {
 	#addTextNode(content, start, end) {
 		if (content.length === 0) return;
 		const textNode = new TxtNode(content, start, end);
-		this.htmlUpdater.add(textNode);
+		this.htmlUpdater.add(textNode, this.isPatch, this.isPatch && this.#elemStack.at(-1)?.id);
 	}
 
 	/** @param {string} data, @param {number} start, @param {number} end */
 	#setStyleTag(data, start, end) {
 		const rules = data.slice(0, -7);
-		// this.#elemStack.at(-1).cssRules = rules;
 		this.#closeCrtElement(start);
 	}
 
@@ -63,7 +62,7 @@ export default class HTMLParser {
 
 	/** @param {number} position*/
 	#closeCrtElement(position) {
-		this.#elemStack.at(-1).end = position + 1; //include >
+		this.#elemStack.at(-1).end = position;
 		this.#elemStack.pop();
 	}
 

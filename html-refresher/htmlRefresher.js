@@ -1,14 +1,12 @@
 import { HtmlUpdater } from "./parser/htmlUpdater.js";
 import { Node, Element, TxtNode } from "./parser/node.js";
-import { State } from "./parser/nodelinkList.js";
-
-const openTagRx = new RegExp(/<[a-z]+>/);
-const attrTxtRx = new RegExp(/\s[^=]+=/);
+import { NodelinkList, State } from "./parser/nodelinkList.js";
+import { CharCode } from "./utils/html-enums.js";
 
 /**
  * @typedef change
  * @type {object}
- * @property {{start:number}} range
+ * @property {{start:object,with:Function}} range
  * @property {number} rangeOffset
  * @property {number} rangeLength
  * @property {string} text
@@ -23,6 +21,7 @@ const attrTxtRx = new RegExp(/\s[^=]+=/);
  * @property {string}[txtData]
  * @property {string}[tagName]
  * @property {object}[attribute]
+ * @property {object}[relative]
  */
 
 /**
@@ -32,8 +31,16 @@ const attrTxtRx = new RegExp(/\s[^=]+=/);
  * @property {string} fileName
  * @property {Function} getText
  * @property {Function} getWordRangeAtPosition
+ * @property {Function} lineAt
  * @property {Function} offsetAt
  */
+
+/*//BUG function isEmpty(text) {
+	let i = text.length;
+	if (i === 1 && text.charCodeAt(0) === CharCode.Space) return false; //allow 1 space
+	while (--i) if (text.charCodeAt(i) !== CharCode.Space) return false;
+	return true;
+} */
 
 export default class HtmlRefresher extends HtmlUpdater {
 	/**@param {document} document*/
@@ -45,41 +52,86 @@ export default class HtmlRefresher extends HtmlUpdater {
 	/**@param {change} change, @returns {refreshData|null}*/
 	getElemDataAtOffset(change) {
 		const { rangeOffset, rangeLength, text } = change;
-		/*if (text.charCodeAt(0) <= 13) {
-			const node = this.getNodeAtPosition(rangeOffset);
-			node && this.shiftForward(node, text.length), this.shiftParent(node, change.rangeOffset, text.length);
-			return null;
-		} */
-
-		const node = this.getNodeAtPosition(rangeOffset);
-
-		if (!node) {
-			console.error("node not found at " + rangeOffset);
+		const node = this.getNearestNodeAt(rangeOffset);
+		//if (text === "\n" || isEmpty(text)//BUG
+		if (text === "\n") {
+			this.shiftTree(node, text.length), NodelinkList.shiftParent(node, change.rangeOffset, text.length);
 			return null;
 		}
+		//add new element
+		if (text.endsWith(">")) return this.#formNewNodesData(change, node);
+
 		const isElem = node.type === Node.ELEMENT;
-		const state = isElem ? this.getStateInElemAt(rangeOffset, node) : null;
+		const state = isElem ? NodelinkList.getStateInElemAt(rangeOffset, node) : null;
 		if (state === State.InStyle || state === State.InScript) {
-			this.shiftTree(change.rangeLength, text.length, node);
+			this.shiftTree(node, text.length - change.rangeLength);
 			return null;
 		}
 		if (!text) return this.#removeNodeAndGetData(change, node, state, isElem);
-		if (text.includes(">")) {
-			//create element
-			rangeLength === 0 || this.updateTxtNode(node, { text: "", rangeLength, rangeOffset });
-			const elemData = this.#getTxtByRegInDoc(change, openTagRx);
-			elemData.text = elemData.text + text.slice(text.indexOf(">") + 1);
-			return this.insertNewElems(elemData, node, state);
-		}
-		if (text.includes("=")) {
-			//create attribute
-			const attrTxt = this.#getTxtByRegInDoc(change, attrTxtRx);
-			const attrData = attrTxt + text.slice(text.indexOf("=") + 1);
+
+		if (text.endsWith('""')) {
+			const attrData = text !== '""' ? this.#getAttrTxt(change) : { start: change.rangeOffset, text };
 			return this.addNewAttribute(attrData, node);
 		}
 
 		if (!state) return this.#formTxtNodeData(change, node);
-		return this.states[state]?.(change, node, state);
+		return this.#states[state]?.(change, node, state);
+	}
+
+	/**@param {change} change, @param {Element|TxtNode} node, @returns {refreshData}*/
+	#formNewNodesData(change, node) {
+		const { rangeOffset, rangeLength, text } = change;
+		rangeLength === 0 || this.updateTxtNode(node, { text: "", rangeLength, rangeOffset });
+		const elemData = text.startsWith("<") ? { text, start: rangeOffset } : this.#getFullElemTxt(change);
+
+		const insertElemData = { action: "insertNewNodes", patchNodes: null };
+		if (elemData.start > node.end) {
+			insertElemData.relative = NodelinkList.findRelativeNode(node, elemData.start);
+		}
+		if (insertElemData.relative || node.type === Node.TEXT) {
+			const isTxtEmpty = node.nodeValue === "";
+
+			if (isTxtEmpty) {
+				insertElemData.patchNodes = this.insertNewElems(elemData, node._previous);
+				insertElemData.replaceTxtNodeId = node.id;
+			} else return this.#formSiblingData(change, node);
+		} else {
+			//add nodes between text data
+			insertElemData.patchNodes = this.insertNewElems(elemData, node);
+			insertElemData.nodeId = node.id;
+		}
+
+		return insertElemData;
+	}
+
+	/**@param {change} change, @param {Element|TxtNode} node, @returns {refreshData}*/
+	#formSiblingData(change, node) {
+		//TODO add support for rangeLength >0
+		const { rangeOffset, rangeLength, text } = change;
+		const updateDataArr = { action: "replaceSiblings", nodeId: node.id, siblingDataArr: [] };
+		//update left txt node value
+		const endText = node.nodeValue.slice(rangeOffset - node.start);
+		const change1 = { text: "", rangeLength: endText.length, rangeOffset };
+		const leftTxtValue = this.updateTxtNode(node, change1);
+		updateDataArr.siblingDataArr.push({
+			action: "updateTxtNode",
+			txtData: leftTxtValue,
+		});
+		//insert new elems
+		const elemData = { text: change.text, start: change.rangeOffset };
+		const patchNodes = this.insertNewElems(elemData, node);
+		const insertElemData = { action: "insertNewNodes", patchNodes };
+		updateDataArr.siblingDataArr.push(insertElemData);
+		//insert txtnode with right side endText
+		const txtNode = new TxtNode(endText, change.rangeOffset + change.text.length);
+		//if isPatch is true-> replace this.patchNodes
+		this.crtNode.id === patchNodes[0].id || (this.crtNode = this.findNodeById(patchNodes[0]));
+		this.add(txtNode, false);
+		updateDataArr.siblingDataArr.push({
+			action: "addTxtNode",
+			txtData: txtNode.nodeValue,
+		});
+		return updateDataArr;
 	}
 
 	/**@param {change} change, @param {Element|TxtNode} node, @returns {refreshData|null}*/
@@ -91,10 +143,10 @@ export default class HtmlRefresher extends HtmlUpdater {
 				nodeIds,
 			};
 
-		return isElem ? this.states[state]?.(change, node, state) : this.#formTxtNodeData(change, node);
+		return isElem ? this.#states[state]?.(change, node, state) : this.#formTxtNodeData(change, node);
 	}
 
-	states = {
+	#states = {
 		[State.InTagName]: this.#formElemTagData.bind(this),
 		[State.InAttribute]: this.#formElemAttrData.bind(this),
 		[State.AfterElemEnd]: this.#formDataForNewTxtNode.bind(this),
@@ -102,7 +154,18 @@ export default class HtmlRefresher extends HtmlUpdater {
 	};
 
 	/**@param {change} change, @param {TxtNode} node, @returns {refreshData|null}*/
-	#formTxtNodeData(change, node, state) {
+	#formTxtNodeData(change, node) {
+		if (change.rangeOffset > node.end) {
+			const relative = NodelinkList.findRelativeNode(node, change.rangeOffset);
+			const txtNode = new TxtNode(change.text, change.rangeOffset, change.rangeOffset + change.text.length);
+			this.crtNode = node;
+			this.add(txtNode, false);
+			return {
+				action: "addTxtNode",
+				relative,
+				txtData: txtNode.nodeValue,
+			};
+		}
 		const nodeValue = this.updateTxtNode(node, change);
 		return {
 			action: "updateTxtNode",
@@ -132,18 +195,49 @@ export default class HtmlRefresher extends HtmlUpdater {
 	}
 
 	/**@param {change} change, @param {Element} node, @returns {refreshData|null}*/
-	#formDataForNewTxtNode(change, node, state) {
+	#formDataForNewTxtNode(change, node) {
 		this.insertNewTxtNode(node, change);
 		return {
-			action: state === State.InElement ? "appendTxtNode" : "addTxtNode",
+			action: "addTxtNode",
 			nodeId: node.id,
 			txtData: change.text,
 		};
 	}
 
-	/**@param {change} change, @param {RegExp} regrex, @returns {{text:string,start:number}} */
-	#getTxtByRegInDoc(change, regrex) {
-		const range = this.document.getWordRangeAtPosition(change.range.start, regrex);
-		return { text: this.document.getText(range), start: this.document.offsetAt(range.start) };
+	/**@param {change} change, @returns {{text:string,start:number}} */
+	#getFullElemTxt(change) {
+		const { lineSelTxt, lineStartPos } = this.#getLineSelTxt(change);
+
+		let i = lineSelTxt.length;
+		while (--i) {
+			if (lineSelTxt.charCodeAt(i) === CharCode.Lt && lineSelTxt.charCodeAt(i + 1) !== CharCode.Slash) {
+				const elemTxt = lineSelTxt.slice(i);
+				return { text: elemTxt, start: this.document.offsetAt(lineStartPos) + i };
+			}
+		}
+	}
+
+	/**@param {change} change, @returns {{text:string,start:number}} */
+	#getAttrTxt(change) {
+		const { lineSelTxt, lineStartPos } = this.#getLineSelTxt(change);
+		let i = lineSelTxt.length;
+		while (--i) {
+			if (lineSelTxt.charCodeAt(i) === CharCode.Space) {
+				const elemTxt = lineSelTxt.slice(i + 1);
+				return { text: elemTxt, start: this.document.offsetAt(lineStartPos) + i + 1 };
+			}
+		}
+	}
+
+	/**@param {change} change, @returns {{lineSelTxt:string,lineStartPos:object}} */
+	#getLineSelTxt(change) {
+		const { range, text } = change,
+			lineNum = range.start.line,
+			lineStartPos = range.start.with(lineNum, 0),
+			charLength = range.start.character + text.length,
+			insertedEditPos = range.start.with(lineNum, charLength),
+			elemRange = range.with(lineStartPos, insertedEditPos),
+			lineSelTxt = this.document.getText(elemRange);
+		return { lineSelTxt, lineStartPos };
 	}
 }

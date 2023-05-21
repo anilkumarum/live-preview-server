@@ -67,7 +67,6 @@ export const QuoteType = {
 	NoValue: 0,
 	Unquoted: 1,
 	Double: 3,
-	curly: 125, // }
 };
 
 export const Sequence = {
@@ -79,24 +78,6 @@ export const Sequence = {
 	ScriptTag: new Uint8Array([0x3c, 0x2f, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x3e]), // `</script`
 	StyleTag: new Uint8Array([0x3c, 0x2f, 0x73, 0x74, 0x79, 0x6c, 0x65, 0x3e]), // `</style`
 };
-
-export const voidElements = new Set([
-	"area",
-	"base",
-	"br",
-	"col",
-	"embed",
-	"frame",
-	"hr",
-	"img",
-	"input",
-	"link",
-	"meta",
-	"param",
-	"source",
-	"track",
-	"wbr",
-]);
 
 // <script type="module" src="/client-hmr.js"></script>
 export const clientScript = new Uint8Array([

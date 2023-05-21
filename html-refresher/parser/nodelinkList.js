@@ -1,4 +1,4 @@
-import { Element, Node, TxtNode } from "./node.js";
+import { Attribute, Element, Node, TxtNode } from "./node.js";
 
 /** @readonly @enum {string}*/
 export const State = {
@@ -10,22 +10,25 @@ export const State = {
 	AfterElemEnd: "AfterElemEnd",
 	InStyle: "InStyle",
 	InScript: "InSscript",
+	AfterNode: "AfterNode",
+	BeforeNode: "BeforeNode",
+	InParent: "InParent",
 };
 
 //curNode  node under cursor
 export class NodelinkList {
 	constructor() {}
 
-	/**@type {{_next:Element|TxtNode}}*/
+	/**@protected @type {{_next:Element|TxtNode}}*/
 	head = { _next: null };
-	/**@type {Element|TxtNode}*/
+	/**@protected @type {Element|TxtNode}*/
 	crtNode = this.head;
-	/**@type {Array}*/
+	/**@protected @type {Array}*/
 	patchNodes = [];
 
-	/** @param {Element|TxtNode} newNode*/
-	add(newNode, isPatch) {
-		isPatch && this.patchNodes.push(this.getNodeData(newNode));
+	/** @param {Element|TxtNode} newNode, @param {boolean} isPatch*/
+	add(newNode, isPatch, parentId = null) {
+		isPatch && this.patchNodes.push(NodelinkList.#getNodeData(newNode, parentId));
 		if (this.crtNode._next) {
 			newNode._next = this.crtNode._next;
 			this.crtNode._next._previous = newNode;
@@ -43,43 +46,26 @@ export class NodelinkList {
 			crtNode = crtNode._next;
 			if (!crtNode || !crtNode._next) break;
 		}
-		return position <= crtNode.end ? crtNode : null;
-	}
-
-	/** @param {number} position, @returns {Element|TxtNode} */
-	walkBackwardUntil(position) {
-		let crtNode = this.head;
-
-		while (crtNode._previous.end <= position) {
-			crtNode = crtNode._previous;
-			if (!crtNode) return null;
-		}
-
-		return position <= crtNode.end ? crtNode : null;
-	}
-
-	/**@protected @param {number} rangeLength, @param {number} textLength, @param {Element} node*/
-	shiftTree(rangeLength, textLength, node) {
-		const shift = textLength - rangeLength;
-		shift > 0 ? this.shiftForward(node, shift) : this.shiftBackward(node, -shift);
+		return crtNode;
 	}
 
 	/**@protected @param {Element|TxtNode} node, @param {number} offset*/
-	shiftForward(node, offset, attrIdx = 0) {
+	shiftTree(node, offset, attrIdx = 0) {
 		node.end += offset;
-		node.attributes && this.#shiftAttrForward(node.attributes, offset, attrIdx);
+		node.attributes && NodelinkList.#shiftAttrForward(node.attributes, offset, attrIdx);
 
 		/**@type {Element|TxtNode}*/
 		let nxtNode = node._next;
 		while (nxtNode) {
 			nxtNode.start += offset;
-			nxtNode.attributes && this.#shiftAttrForward(nxtNode.attributes, offset);
+			nxtNode.attributes && NodelinkList.#shiftAttrForward(nxtNode.attributes, offset);
 			nxtNode.end += offset;
 			nxtNode = nxtNode._next;
 		}
 	}
 
-	#shiftAttrForward(attributes, offset, attrIdx = 0) {
+	/**@param {Attribute[]} attributes, @param {number} offset*/
+	static #shiftAttrForward(attributes, offset, attrIdx = 0) {
 		for (let index = attrIdx; index < attributes.length; index++) {
 			const attr = attributes[index];
 			attr.start += offset;
@@ -87,30 +73,8 @@ export class NodelinkList {
 		}
 	}
 
-	/**@protected @param {Element|TxtNode} node, @param {number} offset*/
-	shiftBackward(node, offset, attrIdx = 0) {
-		node.end -= offset;
-		node.attributes && this.#shiftAttrBackward(node.attributes, offset, attrIdx);
-
-		let prevNode = node._previous;
-		while (prevNode) {
-			prevNode.start -= offset;
-			prevNode.attributes && this.#shiftAttrBackward(prevNode.attributes, offset);
-			prevNode.end -= offset;
-			prevNode = prevNode._previous;
-		}
-	}
-
-	#shiftAttrBackward(attributes, offset, attrIdx = 0) {
-		for (let index = attrIdx; index < attributes.length; index++) {
-			const attr = attributes[index];
-			attr.start -= offset;
-			attr.end -= offset;
-		}
-	}
-
 	/**@protected @param {Element|TxtNode} crtNode, @param {number} rangeOffset, @param {number} shift*/
-	shiftParent(crtNode, rangeOffset, shift) {
+	static shiftParent(crtNode, rangeOffset, shift) {
 		if (crtNode.type === Node.ELEMENT && crtNode.end > rangeOffset) crtNode.end += shift;
 
 		let prevNode = crtNode._previous;
@@ -120,15 +84,51 @@ export class NodelinkList {
 		}
 	}
 
-	/**@param {number} position*/
-	getNodeAtPosition(position) {
-		//check need to go forward or backward
+	/**@protected @param {number} position*/
+	getNearestNodeAt(position) {
+		//TODO check need to go forward or backward
 		const curNode = this.#walkForwardUntil(position);
 		return curNode;
 	}
 
-	/**@param {number} position, @param {Element} curElement*/
-	getStateInElemAt(position, curElement) {
+	/**@protected @param {Element|TxtNode} crtNode, @param {number}position, @returns {{relation:string,kinNodeId:number}}}*/
+	static findRelativeNode(crtNode, position) {
+		if (crtNode._next) {
+			return {
+				relation: "NextSibling",
+				kinNodeId: crtNode._next.id,
+			};
+		}
+
+		return {
+			relation: "Parent",
+			kinNodeId: NodelinkList.#findParent(crtNode, position),
+		};
+	}
+
+	/**@param {Element|TxtNode} crtNode, @param {number}position, @returns {number}*/
+	static #findParent(crtNode, position) {
+		while (crtNode.end < position) {
+			crtNode = crtNode._previous;
+		}
+		return crtNode.id;
+	}
+
+	/**@protected @param {number}nodeId, @returns {Element|TxtNode}*/
+	findNodeById(nodeId) {
+		let curNode = this.crtNode;
+		while ((curNode = curNode._previous)) {
+			if (curNode.id === nodeId) return curNode;
+		}
+
+		curNode = this.head;
+		while ((curNode = curNode._next)) {
+			if (curNode.id === nodeId) return curNode;
+		}
+	}
+
+	/**@protected @param {number} position, @param {Element} curElement*/
+	static getStateInElemAt(position, curElement) {
 		if (!curElement) return null;
 		//+1 for include > or space
 		const tagNamePos = curElement.start + curElement.tagName.length + 1;
@@ -146,8 +146,8 @@ export class NodelinkList {
 		} else return State.InTagEnd;
 	}
 
-	/** @param {number} position, @param {Element} curElement, @returns {number}*/
-	getCrtAttrIndex(position, curElement) {
+	/**@protected  @param {number} position, @param {Element} curElement, @returns {number}*/
+	static getCrtAttrIndex(position, curElement) {
 		for (let index = 0; index < curElement.attributes.length; index++) {
 			const attribute = curElement.attributes[index];
 			if (position >= attribute.start && position <= attribute.end) {
@@ -157,7 +157,7 @@ export class NodelinkList {
 		return -1;
 	}
 
-	/**@param {number} start, @param {number} end, @returns {number[]}*/
+	/**@protected @param {number} start, @param {number} end, @returns {number[]}*/
 	removeElementsInRange(start, end) {
 		let crtNode = this.#walkForwardUntil(start);
 		let noteIds = [];
@@ -174,34 +174,24 @@ export class NodelinkList {
 	}
 
 	/**@returns {object}*/
-	getNodeData({ _next, _previous, ...node }) {
+	static #getNodeData({ _next, _previous, ...node }, parentId) {
 		if (node.type === Node.TEXT) {
 			return {
 				type: node.type,
 				nodeValue: node.nodeValue,
+				parentId,
 			};
 		} else if (node.type === Node.ELEMENT) {
 			return {
 				type: node.type,
 				attributes: node.attributes,
 				tagName: node.tagName,
+				parentId,
 			};
 		}
 	}
 
-	/* 	prettyPrint(rootNode = this.head) {
-		let crtNode = rootNode ?? this.head;
-		crtNode._previous && delete crtNode._previous;
-
-		while (crtNode._next) {
-			crtNode = crtNode._next;
-			if (!crtNode || !crtNode._previous) break;
-			delete crtNode._previous;
-		}
-		console.log(JSON.stringify(rootNode._next));
-	}
-
-	prettyNode({ _next, _previous, ...node }) {
+	static prettyNode({ _next, _previous, ...node }) {
 		console.log(node);
-	} */
+	}
 }

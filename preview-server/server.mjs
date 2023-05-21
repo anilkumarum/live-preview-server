@@ -116,6 +116,7 @@ export class PreviewServer extends RouteServer {
 		// if (!htmlRefresher) this.onTxtDocumentOpen(document);
 
 		const updateData = htmlRefresher.getElemDataAtOffset(change);
+		// console.log(updateData);
 		updateData && this.setJsonRes(updateData);
 	};
 
@@ -126,6 +127,7 @@ export class PreviewServer extends RouteServer {
 		// if (!cssRefresher) this.onTxtDocumentOpen(document);
 
 		const updateData = cssRefresher.getRuleDataAtOffset(change);
+		// console.log(updateData);
 		if (updateData) {
 			updateData.sheetUrl = this.getRelativePath(document.fileName);
 			this.setJsonRes(updateData);

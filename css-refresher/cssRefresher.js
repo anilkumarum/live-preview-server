@@ -44,13 +44,12 @@ export class CssRefresher extends CssUpdater {
 
 	/**@param {change} change*/
 	getRuleDataAtOffset(change) {
-		const { rangeOffset, rangeLength, text } = change;
-		if (text === "\n" || text === "\t") {
-			const { cssRule } = this.getRuleAtPosition(rangeOffset);
-			return cssRule && this.shiftForward(cssRule, 1);
+		const { rangeOffset, text } = change;
+		const crtRule = this.getRuleAtPosition(rangeOffset);
+		if (text.startsWith("\n")) {
+			return crtRule.cssRule && this.shiftForward(crtRule.cssRule, text.length);
 		}
 
-		const crtRule = this.getRuleAtPosition(rangeOffset);
 		if (!text) return this.#removeRuleAndGetData(change, crtRule.cssRule);
 		if (text.includes("{")) {
 			const { text: selectorTxt, start } = this.#getTxtByRegInDoc(change, selectorTxtRx);
@@ -58,7 +57,7 @@ export class CssRefresher extends CssUpdater {
 			const ruleData = { start, ruleTxt };
 			return this.insertNewRule(crtRule, ruleData);
 		}
-		if (text.includes(";")) {
+		if (text.endsWith(";")) {
 			const { text: declarationTxt, start } = this.#getTxtByRegInDoc(change, declarationRx);
 			const declarationData = { start, declarationTxt };
 			return this.addNewDeclaration(crtRule.cssRule, declarationData);
@@ -102,11 +101,25 @@ export class CssRefresher extends CssUpdater {
 	#removeRuleAndGetData(change, crtRule) {
 		const { rangeOffset, rangeLength } = change;
 		if (rangeLength > 5) {
-			const rmRulesData = this.removeRuleInRange(rangeOffset, rangeOffset + rangeLength);
-			if (rmRulesData) {
+			//remove rule
+			if (crtRule.start >= rangeOffset && crtRule.end <= rangeOffset + rangeLength) {
+				const rmRulesData = this.removeRuleInRange(rangeOffset, rangeOffset + rangeLength);
+				if (rmRulesData) {
+					return {
+						action: "removeRules",
+						rmRulesData,
+					};
+				}
+			}
+
+			//remove declaration
+			const rmDeclarations = this.removeRuleDeclaration(crtRule, change);
+			if (rmDeclarations) {
 				return {
-					action: "removeRules",
-					rmRulesData,
+					action: "removeDeclarations",
+					parentRule: crtRule.parentRule,
+					index: crtRule.index,
+					rmDeclarations,
 				};
 			}
 		}

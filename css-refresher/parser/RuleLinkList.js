@@ -1,7 +1,7 @@
 import { CssRule, Declaration } from "./cssRule.js";
 
 export class RuleLinkList {
-	constructor() { }
+	constructor() {}
 
 	head = { _next: null };
 	/**@type {CssRule}*/
@@ -94,6 +94,17 @@ export class RuleLinkList {
 			const declaration = declarations[index];
 			declaration.start -= offset;
 			declaration.end -= offset;
+		}
+	}
+
+	/**@protected @param {CssRule} crtRule, @param {number} rangeOffset, @param {number} shift*/
+	shiftParent(crtRule, rangeOffset, shift) {
+		if (crtRule.end > rangeOffset) crtRule.end += shift;
+
+		let prevRule = crtRule._previous;
+		while (prevRule) {
+			if (prevRule.end > rangeOffset) prevRule.end += shift;
+			prevRule = prevRule._previous;
 		}
 	}
 
