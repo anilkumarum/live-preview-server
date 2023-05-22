@@ -7,6 +7,10 @@ window.addEventListener("message", (event) => {
 	if (message.type === "completionList") showPathSuggestion(message.dirListings);
 });
 
+window.addEventListener("keyup", (event) => {
+	event.key === "F12" && vscode.postMessage({ command: "openDevTools" });
+});
+
 /**@type {HTMLIFrameElement} */
 const hostedContent = eId("hostedContent");
 
@@ -26,12 +30,14 @@ const elem = {
 
 function goBack() {
 	willPush = false;
-	hostedContent.src = historyStack.at(--pageIdx);
+	const prevPageUrl = historyStack.at(--pageIdx);
+	prevPageUrl && (hostedContent.src = prevPageUrl);
 }
 
 function goFoward() {
 	willPush = false;
-	hostedContent.src = historyStack.at(++pageIdx);
+	const nxtPageUrl = historyStack.at(++pageIdx);
+	nxtPageUrl && (hostedContent.src = nxtPageUrl);
 }
 
 function reload() {
@@ -81,11 +87,17 @@ export class AddressBar extends HTMLElement {
 		<input id="url-input" class="url-input" type="url"pattern="^/[/.a-zA-Z0-9-]+$" />
 		<menu id="path-suggestions" hidden></menu>
 	</label>
-	<button id="more" title="More Browser Actions" class="more-button icon">
-		<svg class="menu" viewBox="0 0 24 24">
-			<path></path>
-		</svg>
-	</button>`;
+	<details>
+		<summary id="more" title="More Browser Actions" class="more-button icon">
+			<svg class="menu" viewBox="0 0 24 24">
+					<path></path>
+			</svg>
+		</summary>
+		<menu>
+			<li id="open_dev_ools">Open Dev Tools</li>
+		</menu>
+	</details>
+	`;
 	}
 
 	connectedCallback() {
@@ -101,19 +113,20 @@ export class AddressBar extends HTMLElement {
 		// $on(elem.addressInput, "change", goToUrl);
 
 		elem.suggestionList = eId("path-suggestions");
-		$on(elem.addressInput, "mouseup", reqSuggestionList);
+		$on(elem.addressInput, "mouseup", reqSuggestionList.bind(null, null));
 		$on(elem.addressInput, "input", filterSuggestion);
 		$on(elem.addressInput, "blur", () => (elem.suggestionList.hidden = true));
-		// $on(elem.addressInput, "keyup", (event) => event.key === "Enter" && goToUrl(event));
+		$on(elem.addressInput, "keyup", (event) => event.key === "Enter" && goToUrl(event));
 		$on(elem.suggestionList, "mousedown", acceptSuggestionPath);
+		$on(eId("open_dev_ools"), "click", openDevTools);
 
 		elem.addressInput.value = "/src"; //temp
 	}
 }
 
-function reqSuggestionList() {
+function reqSuggestionList(dirPath) {
 	const range = getCurPathRange();
-	const dirPath = elem.addressInput.value.slice(0, range.start);
+	dirPath ??= elem.addressInput.value.slice(0, range.start);
 	vscode.postMessage({ command: "sendDirListing", dirPath });
 }
 
@@ -122,7 +135,7 @@ function compltItem(path) {
 		<svg class="${path.isDirectory ? "folder" : "file"}" viewBox="0 0 24 24">
 			<path></path>
 		</svg>
-		<span data-isdir="${path.isDirectory ? "true" : ""}">${path.name}</span>
+		<span ${path.isDirectory ? "isdir=''" : ""}>${path.name}</span>
 	</li>`;
 }
 
@@ -159,15 +172,29 @@ function filterSuggestion({ data }) {
 }
 
 function acceptSuggestionPath({ target }) {
-	const spanTarget = target.tagName === "SPAN" ? target : target.nextElementSibling;
-	const text = spanTarget.textContent;
+	/**@type {HTMLSpanElement} */
+	const spanTarget =
+		target.tagName === "SPAN"
+			? target
+			: target.tagName === "LI"
+			? target.firstElementChild
+			: target.nextElementSibling;
+	let text = spanTarget.textContent.trim();
 	const range = getCurPathRange();
+	const hasSlash = elem.addressInput.value[range.end] === "/";
+	const isFolder = spanTarget.hasAttribute("isdir");
+	if (isFolder && !hasSlash) text += "/";
 	elem.addressInput.setRangeText(text, range.start, range.end);
-	showSuggestion = false;
+	if (isFolder) {
+		let dirPath = elem.addressInput.value.slice(0, range.end);
+		dirPath.endsWith("/") && (dirPath = dirPath.slice(0, -1));
+		reqSuggestionList(dirPath);
+		//TODO automate / suggestion trigger
+	} else showSuggestion = false;
 }
 
 const CharCode = {
-	Dot: 46,
+	Dot: 46, //.
 	Slash: 0x2f, // /
 };
 
@@ -192,6 +219,20 @@ function getCurPathRange() {
 		}
 	}
 	return range;
+}
+
+function openDevTools({ target }) {
+	vscode.postMessage({ command: "openDevTools" });
+	target.closest("details").open = false;
+}
+//console override
+const types = ["log", "info", "error", "warn"];
+for (const type of types) {
+	console[type] = function () {
+		let args = [];
+		for (const arg of arguments) args.push(typeof arg === "object" ? JSON.stringify(arg) : arg);
+		vscode.postMessage({ command: "console", type, args: args.join(" ") });
+	};
 }
 
 customElements.define("address-bar", AddressBar);

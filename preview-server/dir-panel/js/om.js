@@ -1,6 +1,5 @@
 //NOTE
 // don't add "" in reactive attribute
-//event listener must be at last
 const attrRx = new RegExp(/\s\.(.*)=$/);
 const childFrag = new Map();
 const reactAttrs = new Map();
@@ -242,26 +241,6 @@ export function html(strings, ...keys) {
 	return domFrag;
 }
 
-/**
- *
- * @param {TemplateStringsArray} strings
- * @param  {any[]} keys
- * @returns {HTMLCollectionOf<SVGElement>|SVGElement}
- */
-export function svg(strings, ...keys) {
-	const svgStr = extractor.extract(strings, ...keys);
-	const svgFrag = document.createRange().createContextualFragment(`<svg>${svgStr}</svg>`).firstElementChild;
-
-	//set listener and pass object/array to
-	for (const node of svgFrag.querySelectorAll("*")) node.hasAttributes() && attrParser.parseNodeAttr(node);
-
-	//set nested document fragment
-	childFrag.size > 0 && fragment.setChildFragment(svgFrag);
-
-	clearMap();
-	return svgFrag.childElementCount === 1 ? svgFrag.firstElementChild : svgFrag.children;
-}
-
 function clearMap() {
 	childFrag.clear();
 	reactAttrs.clear();
@@ -456,6 +435,5 @@ function reactArr(targetArr) {
 }
 
 globalThis.html = html;
-globalThis.svg = svg;
 globalThis.map = map;
 globalThis.react = react;

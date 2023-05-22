@@ -1,4 +1,4 @@
-import { ServerResponse } from "node:http";
+import { IncomingMessage, ServerResponse } from "node:http";
 import { stat } from "node:fs/promises";
 import { createDirTree, getRedirectRoutes, updateRedirectRoute } from "../utils/dir-panel.js";
 import { createFileExtMap, err404, hasExt } from "../utils/file-path.js";
@@ -11,14 +11,17 @@ const liveScripts = new Set(["/client-hmr.js", "/node-id.js", "/live-refresh.js"
 
 export default class RouteServer {
 	extensionPath;
-	/**@param {string} cwd*/
+	userCustom;
+	/** @type {Map<string,object>}*/
+	liveRefresher;
+	/**@protected @param {string} cwd*/
 	constructor(cwd) {
 		this.cwd = cwd;
 		this.docFileExtMap = new Map();
 		createFileExtMap(cwd, this.docFileExtMap);
 	}
 
-	/**@protected @param {ServerResponse} res*/
+	/**@protected @param {IncomingMessage}request,  @param {ServerResponse} res*/
 	handleGetRequest(request, res, urlPath) {
 		if (liveScripts.has(urlPath)) {
 			const filepath = path.join(this.extensionPath, "scripts", urlPath);
@@ -32,27 +35,38 @@ export default class RouteServer {
 	/**@protected @param {string} urlPath, @param {boolean} isNavigate, @param {ServerResponse} res*/
 	async serveFileOnRoute(urlPath, isNavigate, res) {
 		let fileExt = "";
+
 		if (isNavigate) {
-			const fstat = await stat(this.cwd + urlPath).catch((err) => errorPage404(urlPath, res));
+			hasExt(urlPath) || (fileExt = this.docFileExtMap.get(urlPath) || "");
+			const fstat = await stat(this.cwd + urlPath + fileExt).catch((err) => errorPage404(urlPath, res));
 			if (!fstat) return;
 			if (fstat.isDirectory()) {
 				const dirPanelPath = path.join(this.extensionPath, "/dir-panel/index.hbs");
 				return serveFile(dirPanelPath, res);
 			}
-			hasExt(urlPath) || (fileExt = this.docFileExtMap.get(urlPath));
+			// this.#addCustomHeaders(res);
 			console.log(new Date().toLocaleTimeString().slice(0, -3), urlPath);
 		} else if (urlPath.startsWith("/dir-panel")) {
 			const filePath = this.extensionPath + urlPath;
 			return serveFile(filePath, res);
 		} else if (urlPath.startsWith("/dir-data-request")) {
-			return await this.sendDirPanelData(urlPath, res);
+			return await this.#sendDirPanelData(urlPath, res);
 		}
 		const filePath = this.cwd + urlPath + fileExt;
 		serveFile(filePath, res);
 	}
 
+	/**@param {ServerResponse} res*/
+	#addCustomHeaders(res) {
+		const headers = this.userCustom.httpHeaders;
+		if (!headers) return;
+		for (const key in headers) {
+			res.setHeader(key, headers[key]);
+		}
+	}
+
 	/**@param {string} urlPath, @param {ServerResponse} res*/
-	async sendDirPanelData(urlPath, res) {
+	async #sendDirPanelData(urlPath, res) {
 		let dirData;
 		switch (urlPath) {
 			case "/dir-data-request/dirs-tree":
@@ -69,7 +83,7 @@ export default class RouteServer {
 		res.end();
 	}
 
-	/**@protected @param {ServerResponse} res*/
+	/**@protected @param {IncomingMessage}request, @param {ServerResponse} res*/
 	handleOtherReqest(request, res, urlPath) {
 		let data = "";
 		request.on("data", (chunk) => (data += chunk));
@@ -80,5 +94,20 @@ export default class RouteServer {
 				res.end('{"status":"saved success"}');
 			} else err404(urlPath, res);
 		});
+		//highlight node in vscode from browser
+		/* if (request.method === "PATCH" && request.url.startsWith("/view/highlight-node-vscode")) {
+			const params = new URLSearchParams(request.url);
+			const nodeId = params.get("node");
+			const htmlRefresher = this.liveRefresher.get(this.cwd + request.headers.referer);
+			if (htmlRefresher) {
+				const node = htmlRefresher.findNodeById(nodeId);
+				let editor = vscode.window.activeTextEditor;
+				const positionStart = editor.document.positionAt(node.start);
+				const positionEnd = editor.document.positionAt(node.end);
+				const  range = new vscode.Range(positionStart,positionEnd);
+				editor.selection = new vscode.Selection(positionStart, positionEnd);
+				editor.revealRange(range);
+			}
+		} */
 	}
 }

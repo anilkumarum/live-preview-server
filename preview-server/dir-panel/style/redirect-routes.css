@@ -60,7 +60,7 @@
             padding: 0.3em;
             border: var(--border);
             border-radius: 0.4em;
-            background-color: whitesmoke;
+            background-color: var(--input-box-bgc);
 
 
             &::before {

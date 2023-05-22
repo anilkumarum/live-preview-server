@@ -5,6 +5,7 @@
     --bg-bgc: hsl(0, 0%, 94%);
     --txt-clr: black;
     --input-bgc: #fff;
+    --input-box-bgc: whitesmoke;
     --menu-bgc: #fff;
     --header-bgc: whitesmoke;
     --section-bgc: #fff;
@@ -24,6 +25,7 @@
         --txt-clr: #bdc1c6;
         --icon-clr: white;
         --input-bgc: hsl(0, 0%, 25%);
+        --input-box-bgc: hsl(0, 0%, 18%);
         --tool-bar-bgc: hsl(0, 0%, 11%);
         --dialog-bgc: hsl(0, 0%, 16%);
         --upload-box: hsl(0, 0%, 22%);

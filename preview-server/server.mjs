@@ -37,7 +37,7 @@ function connectClient(res) {
 		"Cache-Control": "no-cache",
 		Connection: "keep-alive",
 	});
-	res.write(`data:hmr connected\n\n`);
+	res.write(`event:notice\ndata:hmr connected\n\n`);
 }
 
 const created = (port) => console.info(clr["green"], `preview-server ready at ${port} port.`);
@@ -54,12 +54,14 @@ export class PreviewServer extends RouteServer {
 	/** @type {ServerResponse}*/
 	#res;
 
-	/**@param {string}cwd, @param {string}extensionPath */
-	constructor(cwd, extensionPath, isLiveFresh = true) {
+	/**@param {string}cwd, @param {string}extensionPath, @param {object}userConfig, @param {object}userCustom */
+	constructor(cwd, extensionPath, userConfig, userCustom) {
 		super(cwd);
 		this.extensionPath = join(extensionPath, "preview-server");
-		isLiveFresh && loadRefresher();
+		userConfig.isLiveFresh && loadRefresher();
 		this.liveRefresher = new Map();
+		this.userCustom = userCustom;
+		this.isLiveFresh = userConfig.isLiveFresh;
 	}
 
 	/** @param {number} port*/
@@ -91,22 +93,22 @@ export class PreviewServer extends RouteServer {
 	}
 
 	/** @param {document} textDoc*/
-	onTxtDocumentOpen(textDoc) {
-		if (docLangId.has(textDoc.languageId)) this.liveRefresher.set(textDoc.fileName, new HtmlRefresher(textDoc));
-		else if (textDoc.languageId === "css") this.liveRefresher.set(textDoc.fileName, new CssRefresher(textDoc));
+	onTxtDocumentActive(textDoc) {
+		if (!docLangId.has(textDoc.languageId)) return;
+		const pageUrl = this.#getRelativePath(textDoc.fileName);
+		this.#res?.write(`event:pagenav\ndata:${pageUrl}\n\n`);
 	}
 
 	/** @param {string} filePath */
 	reloadOnSave = (filePath) => {
-		if (!this.#res) return;
-		filePath = filePath.replace(this.cwd, "");
-		this.#res.write(`data:${filePath}\n\n`);
+		filePath = this.#getRelativePath(filePath);
+		this.#res?.write(`data:${filePath}\n\n`);
 	};
 
 	//for liverefresh
 	/** @param {object} data*/
-	setJsonRes(data) {
-		this.#res.write(`data:${JSON.stringify(data)}\n\n`);
+	#setJsonRes(data) {
+		this.#res?.write(`data:${JSON.stringify(data)}\n\n`);
 	}
 
 	/** @param {object} change, @param {document} document*/
@@ -117,7 +119,7 @@ export class PreviewServer extends RouteServer {
 
 		const updateData = htmlRefresher.getElemDataAtOffset(change);
 		// console.log(updateData);
-		updateData && this.setJsonRes(updateData);
+		updateData && this.#setJsonRes(updateData);
 	};
 
 	/** @param {change} change, @param {document} document*/
@@ -129,13 +131,21 @@ export class PreviewServer extends RouteServer {
 		const updateData = cssRefresher.getRuleDataAtOffset(change);
 		// console.log(updateData);
 		if (updateData) {
-			updateData.sheetUrl = this.getRelativePath(document.fileName);
-			this.setJsonRes(updateData);
+			updateData.sheetUrl = this.#getRelativePath(document.fileName);
+			this.#setJsonRes(updateData);
 		}
 	};
 
+	/** @param {document} textDoc*/
+	async parseLiveRefresher(textDoc) {
+		if (!this.isLiveFresh) return;
+		if (!HtmlRefresher) await new Promise((r) => setTimeout(r, 100));
+		if (docLangId.has(textDoc.languageId)) this.liveRefresher.set(textDoc.fileName, new HtmlRefresher(textDoc));
+		else if (textDoc.languageId === "css") this.liveRefresher.set(textDoc.fileName, new CssRefresher(textDoc));
+	}
+
 	/** @param {string} filePath*/
-	getRelativePath(filePath) {
+	#getRelativePath(filePath) {
 		return filePath.slice(this.cwd.length);
 	}
 }

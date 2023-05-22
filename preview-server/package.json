@@ -10,6 +10,6 @@
 	"scripts": {
 		"test": "node --test",
 		"dev": "node --watch server.mjs",
-		"bundle": "esbuild ./server.mjs --allow-overwrite --bundle --minify --outdir=out --format=esm --platform=node"
+		"bundle": "esbuild ./server.mjs --allow-overwrite --bundle --minify --splitting --outdir=out --format=esm --platform=node"
 	}
 }

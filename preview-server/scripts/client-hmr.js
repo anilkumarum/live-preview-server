@@ -6,7 +6,6 @@ addEventListener("beforeunload", () => evtSource.close());
 /** @param {MessageEvent} event */
 evtSource.onmessage = async (event) => {
 	const data = event.data;
-	if (data.startsWith("hmr")) return console.info("%c" + data, "color:cyan");
 	if (data.startsWith("{")) {
 		const actionData = JSON.parse(data);
 		// console.log(actionData);
@@ -15,6 +14,14 @@ evtSource.onmessage = async (event) => {
 	const fileType = data.split(".").pop();
 	updateFiles[fileType] ? updateFiles[fileType](data) : reload();
 };
+evtSource.addEventListener("notice", (event) => {
+	const data = event.data;
+	if (data.startsWith("hmr")) return console.info("%c" + data, "color:cyan");
+});
+
+evtSource.addEventListener("pagenav", (event) => {
+	location.assign(event.data);
+});
 evtSource.onerror = () => evtSource.close();
 
 const updateFiles = {
@@ -33,17 +40,6 @@ const updateFiles = {
 //helper function
 /**@param {string} filePath, @returns {string}*/
 const getFileName = (filePath) => filePath.slice(filePath.lastIndexOf("/") + 1);
-
-/** @param {string} pathUrl*/
-async function fetchData(pathUrl) {
-	//TODO get sheet data over websoocet message
-	try {
-		const response = await fetch(pathUrl);
-		return response.ok && response.text();
-	} catch (error) {
-		console.log(error);
-	}
-}
 
 /** @type {number}*/
 var timeoutID;
@@ -74,6 +70,7 @@ function replaceImage(filePath) {
 //%%%%%%%%%% ----- Update CSS File ---------%%%%%%%%%%
 /**@type {Map<string, CSSStyleSheet>} */
 globalThis.liveStyleSheets = new Map();
+const adoptedSheets = new Map();
 // const inlineStyles = new Map();
 
 function setStyleSheets() {
@@ -98,23 +95,33 @@ function updateCSSSheet(filePath) {
 
 /** @param {string} filePath*/
 async function swapStyleLinks(filePath) {
-	try {
-		const sheetData = await fetchData(filePath);
-		const styleSheet = liveStyleSheets.get(filePath);
-		styleSheet.replace(sheetData);
+	const oldLinkEl = liveStyleSheets.get(filePath).ownerNode;
+	/**@type {HTMLLinkElement} */
+	const nwLinkTag = oldLinkEl.cloneNode();
+	nwLinkTag.href = `${filePath}?t=${Date.now()}`;
+	// Once loaded, remove the old link element (with some delay, to avoid FOUC)
+	nwLinkTag.addEventListener("load", setNewSheet, { once: true });
+	oldLinkEl.after(nwLinkTag);
+	console.log("%c" + getFileName(filePath) + " hot reloaded", "color:dodgerblue");
 
-		console.log("%c" + getFileName(filePath) + " hot reloaded", "color:dodgerblue");
-	} catch (error) {
-		console.log(error);
+	function setNewSheet() {
+		oldLinkEl.remove();
+		for (const sheet of document.styleSheets) {
+			if (sheet.ownerNode === nwLinkTag) {
+				liveStyleSheets.set(filePath, sheet);
+				break;
+			}
+		}
 	}
 }
 
 //not for firefox
 /** @param {string} filePath*/
 async function swapStyleSheet(filePath) {
-	const filename = getFileName(filePath);
+	//TODO support adoptedSheets
+	/* 	const filename = getFileName(filePath);
 	let existSheet;
-	if (liveStyleSheets.has(filePath)) existSheet = liveStyleSheets.get(filePath);
+	if (adoptedSheets.has(filePath)) existSheet = adoptedSheets.get(filePath);
 	else {
 		const style = await (await import("./import-css.js")).getImportedCss(filePath);
 		existSheet = document.adoptedStyleSheets.find((sheet) => sheet === style);
@@ -126,15 +133,17 @@ async function swapStyleSheet(filePath) {
 	}
 
 	if (existSheet) {
-		liveStyleSheets.set(filePath, existSheet);
+		adoptedSheets.set(filePath, existSheet);
 		try {
-			const sheetData = await fetchData(filePath);
-			existSheet.replace(sheetData);
-			console.log("%c" + filename + " hot reloaded", "color:dodgerblue");
+			const response = await fetch(filePath);
+			if (response.ok) {
+				existSheet.replace(response.text());
+				console.log("%c" + filename + " hot reloaded", "color:dodgerblue");
+			}
 		} catch (error) {
 			console.log(error);
 		}
-	} else reload();
+	} else reload(); */
 }
 
 //$$$$$$$ Update js File $$$$$$$

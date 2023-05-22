@@ -141,6 +141,15 @@ menu>li:not(:last-child) {
     border-bottom: var(--border);
 }
 
+summary {
+    display: inline-block;
+}
+
+summary+menu {
+    width: 8.5em;
+    right: 0;
+}
+
 iframe {
     width: 100%;
     min-height: 70vh;

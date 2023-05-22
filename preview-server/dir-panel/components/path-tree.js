@@ -3,10 +3,14 @@ import commonCss from "/dir-panel/style/common.css" assert { type: "css" };
 import pathTreecss from "/dir-panel/style/path-tree.css" assert { type: "css" };
 
 const treeRoute = eId("tree-route");
-$on(treeRoute.nextElementSibling, "click", () => location.assign(treeRoute.value));
+$on(treeRoute.nextElementSibling, "click", goToUrl);
 
 function setPath(path) {
 	treeRoute.value = path;
+}
+
+function goToUrl() {
+	location.assign(treeRoute.value);
 }
 
 export class PathTree extends HTMLElement {
@@ -37,7 +41,7 @@ export class PathTree extends HTMLElement {
 						</details>
 				  </li>`
 				: html`<li>
-						<div class="path-item" @mouseenter=${setPath.bind(this, path.path)}>
+						<div class="path-item" @mouseenter=${setPath.bind(this, path.path)} @click=${goToUrl}>
 							<hp-icon pt="${extname(path.name) ?? "file"}"></hp-icon>
 							<span>${path.name}</span>
 						</div>

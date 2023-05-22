@@ -47,6 +47,7 @@ export function getHTMLContent(jsSrc: vscode.Uri, cssSrc: vscode.Uri, iframeUrl,
 	</html>`;
 }
 
+//TODO cache suggestion list
 export async function getDirListings(dirPath: string): Promise<{ name: string; isDirectory: boolean }[]> {
 	try {
 		const dirents = await readdir(dirPath, { withFileTypes: true });

@@ -14,6 +14,10 @@ input[type=text] {
     font-family: inherit;
 }
 
+a {
+    color: rgb(24, 109, 238);
+}
+
 .prime-btn {
     box-shadow: var(--card);
     background-color: #06f;

@@ -46,8 +46,21 @@ export const liveActions = {
 	removeDeclarations: removeDeclarations,
 	insertRule: insertRule,
 };
-
+//livePreviewIds, setLpsNodeId declare in injected note-id.js
 //>>>>>>>>>>>>>>>> HTMLElement Update >>>>>>>>>>>>>>>>>>>>>>
+var highlightedElem;
+/**@param {number}nodeId, @returns {HTMLElement} */
+function getElem(nodeId) {
+	highlightedElem.classList.remove("highlight");
+	/**@type {HTMLElement} */
+	highlightedElem = livePreviewIds.get(nodeId)?.deref();
+	if (highlightedElem) {
+		highlightedElem.classList.add("highlight");
+		highlightedElem.scrollIntoView(true);
+		return highlightedElem;
+	}
+}
+
 /**@param {Array} patchNodes */
 function getNewNodesFrag(patchNodes) {
 	const docFrag = new DocumentFragment();
@@ -82,19 +95,18 @@ function insertNewNodes(updateData) {
 /**@param {refreshData} updateData, @param {Text|DocumentFragment} nodeFrag */
 function insetNodesIntoDomTree(updateData, nodeFrag) {
 	if (updateData.relative) {
-		const kinDomElem = livePreviewIds.get(updateData.relative.kinNodeId)?.deref();
+		const kinDomElem = getElem(updateData.relative.kinNodeId);
 		if (updateData.relative.relation === "Parent") kinDomElem.append(nodeFrag);
 		else if (updateData.relative.relation === "NextSibling")
 			kinDomElem.parentElement.insertBefore(nodeFrag, kinDomElem);
 		else if (updateData.relative.relation === "BeforeSibling") kinDomElem.after(nodeFrag);
 	} else {
 		if (updateData.replaceTxtNodeId) {
-			/**@type {HTMLElement} */
-			const domNode = livePreviewIds.get(updateData.replaceTxtNodeId)?.deref();
+			const domNode = getElem(updateData.replaceTxtNodeId);
 			if (!domNode) return;
 			domNode.parentElement.replaceChild(nodeFrag, domNode);
 		} else {
-			const domElem = livePreviewIds.get(updateData.nodeId)?.deref();
+			const domElem = getElem(updateData.nodeId);
 			if (!domElem) return;
 			domElem.prepend(nodeFrag);
 		}
@@ -103,7 +115,7 @@ function insetNodesIntoDomTree(updateData, nodeFrag) {
 
 /**@param {refreshData} updateData */
 function replaceSiblings(updateData) {
-	const domNode = livePreviewIds.get(updateData.nodeId)?.deref();
+	const domNode = getElem(updateData.nodeId);
 	if (!domNode) return;
 
 	/**@type {Element} */
@@ -139,15 +151,14 @@ function addTxtNode(updateData) {
 
 /**@param {refreshData} updateData */
 function updateTxtNode(updateData) {
-	const txtNode = livePreviewIds.get(updateData.nodeId)?.deref();
+	const txtNode = getElem(updateData.nodeId);
 	if (!txtNode) return;
 	txtNode.nodeValue = updateData.txtData;
 }
 
 /**@param {refreshData} updateData */
 function updateTagName(updateData) {
-	/**@type {HTMLElement} */
-	const domElem = livePreviewIds.get(updateData.nodeId)?.deref();
+	const domElem = getElem(updateData.nodeId);
 	if (!domElem) return;
 	const newDomElem = document.createElement(updateData.tagName);
 	for (const attr of domElem.attributes) {
@@ -161,8 +172,7 @@ function updateTagName(updateData) {
 
 /**@param {refreshData} updateData */
 function updateAttrName(updateData) {
-	/**@type {HTMLElement} */
-	const domElem = livePreviewIds.get(updateData.nodeId)?.deref();
+	const domElem = getElem(updateData.nodeId);
 	if (!domElem) return;
 	const { oldTxt, data } = updateData.attribute;
 	domElem.removeAttribute(oldTxt);
@@ -171,8 +181,7 @@ function updateAttrName(updateData) {
 
 /**@param {refreshData} updateData */
 function updateAttrValue(updateData) {
-	/**@type {HTMLElement} */
-	const domElem = livePreviewIds.get(updateData.nodeId)?.deref();
+	const domElem = getElem(updateData.nodeId);
 	if (!domElem) return;
 	const { data } = updateData.attribute;
 	domElem.setAttribute(data.name, data.value);
@@ -181,16 +190,27 @@ function updateAttrValue(updateData) {
 /**@param {refreshData} updateData */
 function removeNodes(updateData) {
 	for (const nodeId of updateData.nodeIds) {
-		/**@type {HTMLElement} */
-		const domElem = livePreviewIds.get(nodeId)?.deref();
+		const domElem = getElem(nodeId);
 		if (!domElem) return;
 		domElem.remove();
 		livePreviewIds.delete(nodeId);
 	}
 }
 
+/* document.body.addEventListener("click", highlightNodeInVscode);
+function highlightNodeInVscode({ target }) {
+	//TODO websocket message will better
+	fetch(`/view/highlight-node-vscode?node=${target.livePreviewId}`, {
+		method: "PATCH",
+		headers: { "Content-Type": "application/json" },
+	})
+		.then((response) => response.ok && response.json())
+		.then((data) => console.log(data))
+		.catch((err) => console.error(err));
+} */
+
 //$$$$$$$$$$$$$$$$$$$$$$$$$$$ CSSRule update $$$$$$$$$$$$$$$$$$$$$$$$$
-const notFirefox = navigator.userAgent.indexOf("Firefox") === -1;
+const isFirefox = navigator.userAgent.indexOf("Firefox") !== -1;
 
 /**@param {ruleData} updateData */
 function updateRuleSelector(updateData) {
@@ -208,6 +228,7 @@ function updateRuleSelector(updateData) {
 
 /**@param {ruleData} updateData */
 function addDeclaration(updateData) {
+	if (isFirefox) return console.error("live refresh doesn't support in firefox");
 	const rule = getParentRule(updateData).cssRules[updateData.index];
 	if (!rule) return;
 
@@ -221,6 +242,7 @@ function addDeclaration(updateData) {
 
 /**@param {ruleData} updateData */
 function updateRuleDeclarations(updateData) {
+	if (isFirefox) return console.error("live refresh doesn't support in firefox");
 	const rule = getParentRule(updateData).cssRules[updateData.index];
 	if (!rule) return;
 
@@ -251,6 +273,7 @@ function removeRules(updateData) {
 
 /**@param {ruleData} updateData */
 function removeDeclarations(updateData) {
+	if (isFirefox) return console.error("live refresh doesn't support in firefox");
 	const rule = getParentRule(updateData).cssRules[updateData.index];
 	if (!rule) return;
 
@@ -294,3 +317,33 @@ function getParentRule(updateData) {
 	}
 	return parentRule;
 }
+
+//add highlight style
+const cssStyleSheet = new CSSStyleSheet();
+cssStyleSheet.replace(`.highlight {
+	position: relative;
+}
+
+.highlight::before {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	box-shadow: 1px 1px 0 0 rgba(11, 146, 236, 0.3), -1px -1px 0 0 rgba(11, 146, 236, 0.3);
+	background-color: rgba(11, 146, 236, 0.1);
+	animation: highlight 4000ms ease-in-out;
+}
+
+@keyframes highlight {
+
+	0%,
+	100% {
+		background-color: rgba(11, 146, 236, 0.1);
+	}
+
+	30% {
+		background-color: rgba(11, 146, 236, 0.3);
+	}
+}`);
+
+document.adoptedStyleSheets = [...document.adoptedStyleSheets, cssStyleSheet];
