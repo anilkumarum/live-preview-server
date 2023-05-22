@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { InlinePanel } from "./panel-controller/inlinePanel.js";
-import "./utils/status-bar.js";
+import statusBar from "./utils/status-bar.js";
 import { openBrowser } from "./utils/browser.js";
 import { findHTMLDocument } from "./utils/htmldoc.js";
 import { userConfig, userCustom } from "./panel-controller/config.js";
@@ -9,9 +9,11 @@ const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.path;
 
 export async function activate(context: vscode.ExtensionContext) {
 	let port = 2200;
+	let previewServer;
 	const disposableBrowser = vscode.commands.registerCommand("livePreviewServer.start.openBrowser", async () => {
 		const docPath = await startPreviewServer();
 		openBrowser("default", `${port}${docPath}`);
+		statusBar.setCloseCommand();
 	});
 
 	const disposableChrome = vscode.commands.registerCommand(
@@ -19,6 +21,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		async () => {
 			const docPath = await startPreviewServer();
 			openBrowser("chrome", `${port}${docPath}`);
+			statusBar.setCloseCommand();
 		}
 	);
 
@@ -27,51 +30,63 @@ export async function activate(context: vscode.ExtensionContext) {
 		async () => {
 			const docPath = await startPreviewServer();
 			openBrowser("firefox", `${port}${docPath}`);
+			statusBar.setCloseCommand();
 		}
 	);
 
-	const disposableServer = vscode.commands.registerCommand("livePreviewServer.start.server", async () => {
-		await startPreviewServer();
-	});
-
 	const disposablePanel = vscode.commands.registerCommand("livePreviewServer.start.inlinePreview", async () => {
 		const docPath = await startPreviewServer();
-		InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder, port);
+		InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder, port, closePreview);
 	});
+
+	const disposableServer = vscode.commands.registerCommand("livePreviewServer.start.server", async () => {
+		await startPreviewServer();
+		statusBar.setCloseCommand();
+	});
+
+	//close server on command
+	const disposableClose = vscode.commands.registerCommand("livePreviewServer.close.server", () => {
+		closePreview();
+		statusBar.setStartCommand();
+	});
+
 	context.subscriptions.push(disposableBrowser);
 	context.subscriptions.push(disposableChrome);
 	context.subscriptions.push(disposableFirefox);
 	context.subscriptions.push(disposableServer);
 	context.subscriptions.push(disposablePanel);
+	context.subscriptions.push(disposableClose);
 
 	async function startPreviewServer() {
-		const { PreviewServer } = await import("../../preview-server/out/server.mjs");
+		const { PreviewServer } = require("../../preview-server/build/server.js");
+		//const { PreviewServer } = await import("../../preview-server/server.js");
 
-		const previewServer = new PreviewServer(workspaceFolder, context.extensionPath, userConfig, userCustom);
+		previewServer = new PreviewServer(workspaceFolder, context.extensionPath, userConfig, userCustom);
 		port = await previewServer.startServer(port).catch((err) => console.error(err));
 		const document = await findHTMLDocument().catch((err) => console.error(err));
 		await new Promise((r) => setTimeout(r, 10));
 
-		if (!document) return console.error("docPath not available");
+		if (!document) throw new Error("docPath not available");
 		userConfig.liveRefresh && previewServer.parseLiveRefresher(document);
-		setDocumentListener(previewServer);
+		toggleDocumentListener();
 		// runCustomCommand("runCompileCommand");
 
-		//close server on command
-		const disposableClose = vscode.commands.registerCommand("livePreviewServer.close.server", () => {
-			previewServer.closeServer();
-		});
-		context.subscriptions.push(disposableClose);
 		return document.fileName.slice(workspaceFolder.length);
 	}
 
-	function setDocumentListener(previewServer) {
-		const disposableOnDidSave = vscode.workspace.onDidSaveTextDocument(async (textDocument) => {
+	function toggleDocumentListener(doDispose = false) {
+		if (doDispose) {
+			disposableOnDidSave?.dispose();
+			disposableOnDidChange?.dispose();
+			disposableOnChange?.dispose();
+			return;
+		}
+		var disposableOnDidSave = vscode.workspace.onDidSaveTextDocument(async (textDocument) => {
 			// runCustomCommand("runCompileCommand");
 			previewServer.reloadOnSave(textDocument.fileName);
 		});
 
-		const disposableOnDidChange = vscode.window.onDidChangeActiveTextEditor(async (textEditor) => {
+		var disposableOnDidChange = vscode.window.onDidChangeActiveTextEditor(async (textEditor) => {
 			if (!textEditor) return;
 			const textDocument = textEditor.document;
 			if (userConfig.liveRefresh) {
@@ -90,8 +105,10 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.subscriptions.push(disposableOnDidChange);
 
 		if (userConfig.liveRefresh) {
-			const disposableOnChange = vscode.workspace.onDidChangeTextDocument((textDocumentChangeEvent) => {
+			var disposableOnChange = vscode.workspace.onDidChangeTextDocument((textDocumentChangeEvent) => {
 				const { document, contentChanges } = textDocumentChangeEvent;
+				if (!contentChanges[0]) return;
+				//TODO for-loop  on contentChanges
 				switch (document.languageId) {
 					case "html":
 						previewServer.updateElementAtPosition(contentChanges[0], document);
@@ -104,5 +121,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
 			context.subscriptions.push(disposableOnChange);
 		}
+	}
+
+	function closePreview() {
+		toggleDocumentListener(true);
+		previewServer?.closeServer();
 	}
 }

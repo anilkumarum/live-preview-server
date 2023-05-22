@@ -28,10 +28,10 @@
 
 ## Some gotchas in live refresh
 
-- live refresh not update on boolean attribute e.g hidden
+- live refresh not update on boolean attribute e.g hidden\
   solution: add `=""`. example: `hidden=""`
 
-- CSS live refresh doesn't update in html file
+- CSS live refresh doesn't update in html file\
   solution: Use css file
 
 # Issue Tracking

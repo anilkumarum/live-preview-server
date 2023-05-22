@@ -1,7 +1,10 @@
 **/node_modules
 **/out
+**/build
 **/.TODO
 **/samples
 **/.vscode
 live-preview-server-**
 preview-server/test.js
+pnpm-lock.yaml
+rollup.config.mjs

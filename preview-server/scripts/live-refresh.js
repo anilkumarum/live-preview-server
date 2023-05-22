@@ -48,15 +48,27 @@ export const liveActions = {
 };
 //livePreviewIds, setLpsNodeId declare in injected note-id.js
 //>>>>>>>>>>>>>>>> HTMLElement Update >>>>>>>>>>>>>>>>>>>>>>
+/**@type {HTMLElement} */
 var highlightedElem;
 /**@param {number}nodeId, @returns {HTMLElement} */
 function getElem(nodeId) {
-	highlightedElem.classList.remove("highlight");
+	if (highlightedElem) {
+		highlightedElem.nodeType === Node.TEXT_NODE
+			? highlightedElem.parentElement.classList.add("lps-highlighted")
+			: highlightedElem?.classList.remove("lps-highlighted");
+	}
+
 	/**@type {HTMLElement} */
 	highlightedElem = livePreviewIds.get(nodeId)?.deref();
+
 	if (highlightedElem) {
-		highlightedElem.classList.add("highlight");
-		highlightedElem.scrollIntoView(true);
+		if (highlightedElem.nodeType === Node.TEXT_NODE) {
+			highlightedElem.parentElement.classList.add("lps-highlighted");
+			highlightedElem.parentElement.scrollIntoView(true);
+		} else {
+			highlightedElem.classList.add("highlight");
+			highlightedElem.scrollIntoView(true);
+		}
 		return highlightedElem;
 	}
 }
@@ -320,17 +332,18 @@ function getParentRule(updateData) {
 
 //add highlight style
 const cssStyleSheet = new CSSStyleSheet();
-cssStyleSheet.replace(`.highlight {
+cssStyleSheet.replace(`.lps-highlighted {
 	position: relative;
 }
 
-.highlight::before {
+.lps-highlighted::before {
 	content: "";
 	position: absolute;
 	inset: 0;
 	z-index: 1;
 	box-shadow: 1px 1px 0 0 rgba(11, 146, 236, 0.3), -1px -1px 0 0 rgba(11, 146, 236, 0.3);
 	background-color: rgba(11, 146, 236, 0.1);
+	border-radius: 2px;
 	animation: highlight 4000ms ease-in-out;
 }
 

@@ -5,11 +5,11 @@ class StatusBar {
 	#statusBarItem: vscode.StatusBarItem;
 	constructor() {
 		this.#statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 2);
-		this.#init();
+		this.setStartCommand();
 	}
 
-	#init() {
-		this.setText(`open in browser`);
+	setStartCommand() {
+		this.#statusBarItem.text = `Open in browser`;
 		this.#statusBarItem.tooltip = this.#setToolTip();
 		this.#statusBarItem.command = "livePreviewServer.start.openBrowser";
 		this.#statusBarItem.show();
@@ -25,8 +25,10 @@ class StatusBar {
 		return tooltip;
 	}
 
-	setText(text: string) {
-		this.#statusBarItem.text = text;
+	setCloseCommand() {
+		this.#statusBarItem.text = "Close Server";
+		this.#statusBarItem.command = "livePreviewServer.close.server";
+		this.#statusBarItem.tooltip = "close live preview server";
 	}
 
 	hide() {

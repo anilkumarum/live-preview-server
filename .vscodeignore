@@ -18,5 +18,8 @@ preview-server/utils
 preview-server/services
 preview-server/package.json
 preview-server/package-lock.json
-preview-server/server.mjs
+preview-server/server.js
 preview-server/test.js
+panel-ui/address-bar.scss
+pnpm-lock.yaml
+rollup.config.mjs

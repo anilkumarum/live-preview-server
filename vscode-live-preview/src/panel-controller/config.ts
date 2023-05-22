@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-const configMap = vscode.workspace.getConfiguration("compilets.config");
+const configMap = vscode.workspace.getConfiguration("livePreviewServer.config");
 
 type UserConfig = {
 	liveRefresh: boolean;

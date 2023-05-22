@@ -4,6 +4,7 @@ import { WebComm } from "./webcomm.js";
 
 export class InlinePanel {
 	static currentPanel: InlinePanel | undefined;
+	static closePreview: Function;
 
 	constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
 		this.#panel = panel;
@@ -15,7 +16,13 @@ export class InlinePanel {
 	#extensionUri: vscode.Uri;
 	static column: vscode.ViewColumn = vscode.ViewColumn.Two;
 
-	static openPanel(extensionUri: vscode.Uri, iframeUrl: string, cwd: string, port: number) {
+	static openPanel(
+		extensionUri: vscode.Uri,
+		iframeUrl: string,
+		cwd: string,
+		port: number,
+		closePreview: Function
+	) {
 		if (InlinePanel.currentPanel) {
 			InlinePanel.currentPanel.#panel.reveal(InlinePanel.column);
 			return;
@@ -27,6 +34,7 @@ export class InlinePanel {
 		});
 
 		InlinePanel.currentPanel = new InlinePanel(panel, extensionUri);
+		InlinePanel.closePreview = closePreview;
 
 		//convert absolutepath into webview uri path
 		const cssFile = vscode.Uri.joinPath(extensionUri, "panel-ui", "address-bar.css");
@@ -41,6 +49,7 @@ export class InlinePanel {
 
 	dispose() {
 		InlinePanel.currentPanel = undefined;
+		InlinePanel.closePreview();
 
 		// Clean up our resources
 		this.#panel.dispose();

@@ -1,13 +1,13 @@
 {
 	"name": "live-preview-server",
 	"displayName": "Live Preview Server",
-	"version": "0.0.2",
+	"version": "0.0.4",
 	"description": "dependency free native nodejs live preview server. embedded live html preview. lightweight and ultra fast",
 	"publisher": "anilkumarum",
 	"license": "GPL-3.0-only",
 	"icon": "logo.jpeg",
 	"galleryBanner": {
-		"color": "#C80000",
+		"color": "#9904be",
 		"theme": "dark"
 	},
 	"preview": true,
@@ -187,7 +187,7 @@
 	},
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"bundle": "esbuild ./vscode-live-preview/src/extension.js --allow-overwrite --bundle --minify --outfile=./vscode-live-preview/out/extension.js --external:vscode --external:../../preview-server/out/server.mjs --format=cjs --platform=node"
+		"bundle": "esbuild ./vscode-live-preview/src/extension.js --allow-overwrite --bundle --minify --outfile=./vscode-live-preview/out/extension.js --external:vscode --external:../../preview-server/build/server.js --format=cjs --platform=node"
 	},
 	"devDependencies": {
 		"@types/node": "^16.18.25",

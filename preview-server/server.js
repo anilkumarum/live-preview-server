@@ -53,25 +53,37 @@ export class PreviewServer extends RouteServer {
 	#server;
 	/** @type {ServerResponse}*/
 	#res;
+	/** @type {number}*/
+	port;
+	isRunning = false;
 
 	/**@param {string}cwd, @param {string}extensionPath, @param {object}userConfig, @param {object}userCustom */
 	constructor(cwd, extensionPath, userConfig, userCustom) {
 		super(cwd);
 		this.extensionPath = join(extensionPath, "preview-server");
-		userConfig.isLiveFresh && loadRefresher();
+		userConfig.liveRefresh && loadRefresher();
 		this.liveRefresher = new Map();
 		this.userCustom = userCustom;
-		this.isLiveFresh = userConfig.isLiveFresh;
+		this.isLiveFresh = userConfig.liveRefresh;
 	}
 
 	/** @param {number} port*/
 	async startServer(port) {
 		return new Promise((resolve, reject) => {
+			if (this.isRunning) return resolve(port);
+			this.port = port;
 			// port = await getNextOpenPort(port);
 			this.#server = createServer().listen(port, created.bind(null, port));
 			this.#server.on("request", this.#onRequest);
 			this.#server.once("error", () => reject("cannot start server at port " + port));
-			this.#server.once("listening", () => resolve(port));
+			this.#server.once("listening", () => {
+				this.isRunning = true;
+				resolve(port);
+			});
+			this.#server.once("close", () => {
+				this.isRunning = false;
+				console.log("Live Server Stopped");
+			});
 		});
 	}
 
@@ -116,7 +128,6 @@ export class PreviewServer extends RouteServer {
 		if (!this.liveRefresher) return console.error("live refresh not enabled");
 		const htmlRefresher = this.liveRefresher.get(document.fileName);
 		// if (!htmlRefresher) this.onTxtDocumentOpen(document);
-
 		const updateData = htmlRefresher.getElemDataAtOffset(change);
 		// console.log(updateData);
 		updateData && this.#setJsonRes(updateData);

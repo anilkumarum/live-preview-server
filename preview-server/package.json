@@ -5,11 +5,16 @@
 	"description": "live-preview-server",
 	"author": "anilkumarum",
 	"license": "GPL-3.0-only",
-	"main": "server.mjs",
-	"type": "module",
+	"main": "server.js",
 	"scripts": {
 		"test": "node --test",
-		"dev": "node --watch server.mjs",
-		"bundle": "esbuild ./server.mjs --allow-overwrite --bundle --minify --splitting --outdir=out --format=esm --platform=node"
+		"dev": "node --watch server.js",
+		"bundle": "esbuild ./server.js --allow-overwrite --bundle --minify --splitting --outdir=out --format=esm --platform=node",
+		"build": "rollup -c"
+	},
+	"devDependencies": {
+		"@rollup/plugin-node-resolve": "^15.0.2",
+		"@rollup/plugin-terser": "^0.4.3",
+		"rollup": "^3.23.0"
 	}
 }
