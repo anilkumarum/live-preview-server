@@ -85,7 +85,10 @@ export class Tokenizer extends EventEmitter {
 
 	#stateCloseDeclarationBlock(code) {
 		isWhitespace(code) && (code = this.#skipWhitespace());
-		if (code === CharCode.closingCurly) return this.#emitData("closerule");
+		if (code === CharCode.closingCurly) {
+			this.state = State.BeforeSelector;
+			return this.#emitData("closerule");
+		}
 		isWhitespace(code) && (code = this.#skipWhitespace());
 		if (code === CharCode.Amp) this.state = State.BeforeNestedSelector;
 		else {

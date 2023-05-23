@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
 import { getHTMLContent, getWebviewOptions, getWebviewPanelOptions } from "./helper.js";
 import { WebComm } from "./webcomm.js";
+import ConsoleOutput from "../utils/output-channel.js";
 
 export class InlinePanel {
 	static currentPanel: InlinePanel | undefined;
 	static closePreview: Function;
+	static console: ConsoleOutput;
 
 	constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
 		this.#panel = panel;
@@ -43,14 +45,15 @@ export class InlinePanel {
 		const jsSrc = panel.webview.asWebviewUri(jsFile);
 		// set HTML content
 		panel.webview.html = getHTMLContent(jsSrc, cssSrc, iframeUrl, port);
+		InlinePanel.console = new ConsoleOutput("LPS Preview Console");
 		//navigation controller
-		new WebComm(panel.webview, cwd);
+		new WebComm(panel.webview, cwd, InlinePanel.console);
 	}
 
 	dispose() {
 		InlinePanel.currentPanel = undefined;
 		InlinePanel.closePreview();
-
+		InlinePanel.console.dispose();
 		// Clean up our resources
 		this.#panel.dispose();
 	}

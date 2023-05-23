@@ -35,13 +35,6 @@ import { CharCode } from "./utils/html-enums.js";
  * @property {Function} offsetAt
  */
 
-/*//BUG function isEmpty(text) {
-	let i = text.length;
-	if (i === 1 && text.charCodeAt(0) === CharCode.Space) return false; //allow 1 space
-	while (--i) if (text.charCodeAt(i) !== CharCode.Space) return false;
-	return true;
-} */
-
 export default class HtmlRefresher extends HtmlUpdater {
 	/**@param {document} document*/
 	constructor(document) {
@@ -51,10 +44,10 @@ export default class HtmlRefresher extends HtmlUpdater {
 
 	/**@param {change} change, @returns {refreshData|null}*/
 	getElemDataAtOffset(change) {
-		const { rangeOffset, rangeLength, text } = change;
+		const { rangeOffset, text } = change;
 		const node = this.getNearestNodeAt(rangeOffset);
-		//if (text === "\n" || isEmpty(text)//BUG
-		if (text === "\n") {
+
+		if (text.charCodeAt(0) === CharCode.LineBreak || text.charCodeAt(0) === CharCode.Tab) {
 			this.shiftTree(node, text.length), NodelinkList.shiftParent(node, change.rangeOffset, text.length);
 			return null;
 		}
@@ -107,7 +100,7 @@ export default class HtmlRefresher extends HtmlUpdater {
 	/**@param {change} change, @param {Element|TxtNode} node, @returns {refreshData}*/
 	#formSiblingData(change, node) {
 		//TODO add support for rangeLength >0
-		const { rangeOffset, rangeLength, text } = change;
+		const { rangeOffset, text } = change;
 		const updateDataArr = { action: "replaceSiblings", nodeId: node.id, siblingDataArr: [] };
 		//update left txt node value
 		const endText = node.nodeValue.slice(rangeOffset - node.start);
@@ -118,12 +111,12 @@ export default class HtmlRefresher extends HtmlUpdater {
 			txtData: leftTxtValue,
 		});
 		//insert new elems
-		const elemData = { text: change.text, start: change.rangeOffset };
+		const elemData = { text, start: rangeOffset };
 		const patchNodes = this.insertNewElems(elemData, node);
 		const insertElemData = { action: "insertNewNodes", patchNodes };
 		updateDataArr.siblingDataArr.push(insertElemData);
 		//insert txtnode with right side endText
-		const txtNode = new TxtNode(endText, change.rangeOffset + change.text.length);
+		const txtNode = new TxtNode(endText, rangeOffset + text.length);
 		//if isPatch is true-> replace this.patchNodes
 		this.crtNode.id === patchNodes[0].id || (this.crtNode = this.findNodeById(patchNodes[0]));
 		this.add(txtNode, false);

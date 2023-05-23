@@ -25,9 +25,9 @@ import { getNextOpenPort } from "./utils/port.js";
  */
 
 /** @param {ServerResponse} res */
-function connectClient(res) {
-	console.info(`\x1B[47m%s\x1B[0m`, " client connected ");
-	console.info(clr["cyan"], "waiting for file change");
+function connectClient(res, logger) {
+	logger.log("✅ 'Client connected'");
+	logger.log("⌛ Waiting for file change...");
 	res.writeHead(200, {
 		"Access-Control-Allow-Origin": "*",
 		"Access-Control-Allow-Methods": "GET,OPTIONS",
@@ -37,10 +37,10 @@ function connectClient(res) {
 		"Cache-Control": "no-cache",
 		Connection: "keep-alive",
 	});
-	res.write(`event:notice\ndata:hmr connected\n\n`);
+	res.write(`event:notice\ndata:lps hmr connected\n\n`);
 }
 
-const created = (port) => console.info(clr["green"], `preview-server ready at ${port} port.`);
+const created = (logger, port) => logger.log(`🔴 Preview server running at ${port} port`);
 
 let HtmlRefresher, CssRefresher;
 async function loadRefresher() {
@@ -58,12 +58,13 @@ export class PreviewServer extends RouteServer {
 	isRunning = false;
 
 	/**@param {string}cwd, @param {string}extensionPath, @param {object}userConfig, @param {object}userCustom */
-	constructor(cwd, extensionPath, userConfig, userCustom) {
+	constructor(cwd, extensionPath, userConfig, logger, userCustom) {
 		super(cwd);
 		this.extensionPath = join(extensionPath, "preview-server");
 		userConfig.liveRefresh && loadRefresher();
 		this.liveRefresher = new Map();
 		this.userCustom = userCustom;
+		this.logger = logger;
 		this.isLiveFresh = userConfig.liveRefresh;
 	}
 
@@ -73,7 +74,7 @@ export class PreviewServer extends RouteServer {
 			if (this.isRunning) return resolve(port);
 			this.port = port;
 			// port = await getNextOpenPort(port);
-			this.#server = createServer().listen(port, created.bind(null, port));
+			this.#server = createServer().listen(port, created.bind(null, this.logger, port));
 			this.#server.on("request", this.#onRequest);
 			this.#server.once("error", () => reject("cannot start server at port " + port));
 			this.#server.once("listening", () => {
@@ -82,7 +83,8 @@ export class PreviewServer extends RouteServer {
 			});
 			this.#server.once("close", () => {
 				this.isRunning = false;
-				console.log("Live Server Stopped");
+				this.logger.log("Live Server Stopped");
+				this.logger.dispose();
 			});
 		});
 	}
@@ -92,7 +94,7 @@ export class PreviewServer extends RouteServer {
 		const [urlPath, searchParams] = request.url.split("?", 2);
 		if (urlPath === "/ws") {
 			this.#res = res;
-			return connectClient(res);
+			return connectClient(res, this.logger);
 		}
 
 		request.method === "GET"

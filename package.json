@@ -1,7 +1,7 @@
 {
 	"name": "live-preview-server",
 	"displayName": "Live Preview Server",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "dependency free native nodejs live preview server. embedded live html preview. lightweight and ultra fast",
 	"publisher": "anilkumarum",
 	"license": "GPL-3.0-only",
@@ -77,6 +77,11 @@
 			{
 				"command": "livePreviewServer.start.server",
 				"title": "Start live preview server",
+				"category": "LPS"
+			},
+			{
+				"command": "livePreviewServer.start.debugServer",
+				"title": "Start debug server",
 				"category": "LPS"
 			},
 			{

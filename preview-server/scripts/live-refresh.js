@@ -23,7 +23,7 @@
  * @property {number} index
  * @property {string} sheetUrl
  * @property {string} [selector]
- * @property {object} [declarations]
+ * @property {object} [declaration]
  * @property {array} [rmRulesData]
  * @property {string} [ruleTxt]
  * @property {Array} [rmDeclarations]
@@ -52,26 +52,31 @@ export const liveActions = {
 var highlightedElem;
 /**@param {number}nodeId, @returns {HTMLElement} */
 function getElem(nodeId) {
-	if (highlightedElem) {
-		highlightedElem.nodeType === Node.TEXT_NODE
-			? highlightedElem.parentElement.classList.add("lps-highlighted")
-			: highlightedElem?.classList.remove("lps-highlighted");
-	}
+	/* highlightedElem && removeHighlight(highlightedElem); */
 
 	/**@type {HTMLElement} */
 	highlightedElem = livePreviewIds.get(nodeId)?.deref();
 
-	if (highlightedElem) {
+	/* 	if (highlightedElem) {
 		if (highlightedElem.nodeType === Node.TEXT_NODE) {
 			highlightedElem.parentElement.classList.add("lps-highlighted");
 			highlightedElem.parentElement.scrollIntoView(true);
 		} else {
-			highlightedElem.classList.add("highlight");
+			highlightedElem.classList.add("lps-highlighted");
 			highlightedElem.scrollIntoView(true);
 		}
-		return highlightedElem;
-	}
+
+		setTimeout(removeHighlight, 4000, highlightedElem);
+	} */
+	return highlightedElem;
 }
+
+/**@param {HTMLElement}  highlightedElem*/
+/* function removeHighlight(highlightedElem) {
+	highlightedElem.nodeType === Node.TEXT_NODE
+		? highlightedElem.parentElement.classList.remove("lps-highlighted")
+		: highlightedElem?.classList.remove("lps-highlighted");
+} */
 
 /**@param {Array} patchNodes */
 function getNewNodesFrag(patchNodes) {
@@ -259,7 +264,7 @@ function updateRuleDeclarations(updateData) {
 	if (!rule) return;
 
 	const styleMap = rule.styleMap;
-	const data = updateData.declarations;
+	const data = updateData.declaration;
 	if (data.prop === "property") {
 		try {
 			styleMap.delete(data.oldTxt);
@@ -279,7 +284,11 @@ function removeRules(updateData) {
 	for (const ruleData of updateData.rmRulesData) {
 		ruleData.sheetUrl = updateData.sheetUrl;
 		const parentRule = getParentRule(ruleData);
-		parentRule.deleteRule(ruleData.index);
+		try {
+			parentRule.deleteRule(ruleData.index);
+		} catch (error) {
+			console.error(error.message);
+		}
 	}
 }
 
@@ -342,7 +351,7 @@ cssStyleSheet.replace(`.lps-highlighted {
 	inset: 0;
 	z-index: 1;
 	box-shadow: 1px 1px 0 0 rgba(11, 146, 236, 0.3), -1px -1px 0 0 rgba(11, 146, 236, 0.3);
-	background-color: rgba(11, 146, 236, 0.1);
+	background-color: rgba(11, 146, 236, 0.02);
 	border-radius: 2px;
 	animation: highlight 4000ms ease-in-out;
 }

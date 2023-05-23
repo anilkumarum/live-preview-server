@@ -17,6 +17,7 @@ evtSource.onmessage = async (event) => {
 evtSource.addEventListener("notice", (event) => {
 	const data = event.data;
 	if (data.startsWith("hmr")) return console.info("%c" + data, "color:cyan");
+	// if(data.startsWith("config"))
 });
 
 evtSource.addEventListener("pagenav", (event) => {

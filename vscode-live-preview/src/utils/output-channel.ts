@@ -13,11 +13,19 @@ export default class ConsoleOutput {
 	#msgChannel: vscode.OutputChannel;
 
 	constructor(channel) {
-		this.#msgChannel = vscode.window.createOutputChannel(channel, "html");
+		this.#msgChannel = vscode.window.createOutputChannel(channel, "javascript");
 	}
 
 	write(method: string, msg: string) {
 		OutputLevel[method] >= userLogLevel && this.#msgChannel.show();
-		this.#msgChannel.appendLine(`[${method} ${new Date().toLocaleTimeString().slice(0, -3)}] ${msg}`);
+		this.#msgChannel.appendLine(`[${new Date().toLocaleTimeString()}] ${method} ${msg}`);
+	}
+
+	log(msg: string) {
+		this.#msgChannel.appendLine(msg);
+	}
+
+	dispose() {
+		this.#msgChannel.dispose();
 	}
 }

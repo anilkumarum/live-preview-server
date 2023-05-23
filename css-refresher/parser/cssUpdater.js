@@ -7,8 +7,6 @@ export const State = {
 	InDeclaration: "InDeclaration",
 };
 
-const isFirefox = false;
-
 export class CssUpdater extends RuleLinkList {
 	/** @param {string} buffer*/
 	constructor(buffer) {
@@ -25,13 +23,17 @@ export class CssUpdater extends RuleLinkList {
 			crtRule.status === "current" ? this.crtRule : this.findParentRule(crtRule.cssRule, ruleData.start);
 		parentRule && this.parser.ruleStack.push(parentRule);
 		this.parser.parse(ruleData.ruleTxt, ruleData.start);
-		this.shiftForward(crtRule.cssRule._next, ruleData.ruleTxt.length);
-		return {
-			action: "insertRule",
-			parentRule: this.crtRule.parentRule,
-			index: this.crtRule.index,
-			ruleTxt: ruleData.ruleTxt.replaceAll(/\t/g, ""),
-		};
+		const offset = ruleData.ruleTxt.length;
+		this.shiftLinks(crtRule.cssRule._next, offset);
+		parentRule && RuleLinkList.shiftParent(crtRule.cssRule, ruleData.start, offset);
+		return this.crtRule.declarations.length !== 0
+			? {
+					action: "insertRule",
+					parentRule: this.crtRule.parentRule,
+					index: this.crtRule.index,
+					ruleTxt: getRuleTxt(this.crtRule),
+			  }
+			: null;
 	}
 
 	/** @param {number} position, @param {CssRule} cssRule*/
@@ -45,21 +47,24 @@ export class CssUpdater extends RuleLinkList {
 		const { rangeOffset, rangeLength, text } = change;
 		const offset = rangeOffset - cssRule.start;
 		cssRule.selector = cssRule.selector.replaceAt(offset, rangeLength, text);
-		if (text) this.shiftForward(cssRule, text.length - rangeLength, 0, true);
-		else this.shiftBackward(cssRule, text.length - rangeLength, 0, true);
+
+		const shift = text.length - rangeLength;
+		this.shiftLinks(cssRule, shift, "current", 0, true);
+		cssRule.parentRule && RuleLinkList.shiftParent(cssRule, rangeOffset, shift);
 		return cssRule.selector;
 	}
 
 	/** @param {CssRule} cssRule, @param {import("../cssRefresher.js").change} change, @returns {object} */
 	updateRuleDeclarations(cssRule, change) {
 		const { rangeOffset, rangeLength, text } = change;
-		const propIdx = this.getCrtDeclarationIndex(rangeOffset, cssRule);
+		const propIdx = RuleLinkList.getCrtDeclarationIndex(rangeOffset, cssRule);
 		if (propIdx === -1) return;
 
 		/**@type {Declaration} */
 		const declaration = cssRule.declarations[propIdx];
 
 		//TODO find property or value
+		const status = "current";
 		const prop = rangeOffset - declaration.start <= declaration.property.length ? "property" : "value";
 		const position =
 			prop === "property"
@@ -68,16 +73,19 @@ export class CssUpdater extends RuleLinkList {
 		const oldTxt = declaration[prop];
 		if (text) {
 			declaration[prop] = declaration[prop].replaceAt(position, rangeLength, text.trim());
+			const offset = text.length - rangeLength;
 			declaration.end += text.length - rangeLength;
-			this.shiftForward(cssRule, text.length - rangeLength, propIdx + 1);
+			this.shiftLinks(cssRule, text.length - rangeLength, status, propIdx + 1);
+			cssRule.parentRule && RuleLinkList.shiftParent(cssRule, rangeOffset, offset);
 		} else {
 			declaration[prop] = declaration[prop].replaceAt(position, rangeLength);
 			declaration.end -= rangeLength;
 			declaration[prop] || cssRule.declarations.splice(propIdx, 1);
-			this.shiftBackward(cssRule, rangeLength, propIdx + 1);
+			this.shiftLinks(cssRule, rangeLength, status, propIdx + 1);
+			cssRule.parentRule && RuleLinkList.shiftParent(cssRule, rangeOffset, -rangeLength);
 		}
 		//TODO valid declaration,test regrex string:string;
-		return !isFirefox ? { prop, oldTxt, declaration: declaration } : cssRule.declarations;
+		return { prop, oldTxt, declaration: declaration };
 	}
 
 	/**@param {CssRule} crtRule, @param {{start:number,declarationTxt:string}}declarationData*/
@@ -89,27 +97,39 @@ export class CssUpdater extends RuleLinkList {
 		declaration.end = start + declarationTxt.length;
 		declaration.value = value.trimStart().replace(/;$/, "");
 
-		const nxTDeclarationIdx = this.getNxtDeclarationIdxAfterOffset(cssRule.declarations, start);
+		const nxTDeclarationIdx = RuleLinkList.getNxtDeclarationIdxAfterOffset(cssRule.declarations, start);
 		nxTDeclarationIdx === -1
 			? cssRule.declarations.push(declaration)
 			: cssRule.declarations.splice(nxTDeclarationIdx, 0, declaration);
-		this.shiftForward(cssRule, declarationTxt.length, nxTDeclarationIdx);
-		return declaration.value
-			? {
-					action: "addDeclaration",
-					parentRule: cssRule.parentRule,
-					index: cssRule.index,
-					declaration,
-			  }
-			: null;
+		this.shiftLinks(cssRule, declarationTxt.length, "current", nxTDeclarationIdx);
+		cssRule.parentRule && RuleLinkList.shiftParent(cssRule, start, declarationTxt.length);
+		if (!declaration.value) return null;
+
+		if (cssRule.declarations.length !== 1) {
+			return {
+				action: "addDeclaration",
+				parentRule: cssRule.parentRule,
+				index: cssRule.index,
+				declaration,
+			};
+		}
+
+		return {
+			action: "insertRule",
+			parentRule: this.crtRule.parentRule,
+			index: this.crtRule.index,
+			ruleTxt: getRuleTxt(cssRule),
+		};
 	}
 
 	/**@param {number} start, @param {number} end, @returns {{parentRule:number[],index:number}[]}*/
 	removeRuleInRange(start, end) {
 		let { cssRule: crtRule } = this.walkForwardUntil(start);
 		let rules = [];
-		if (crtRule.start >= start && crtRule.end <= end)
+		if (crtRule.start >= start && crtRule.end <= end) {
 			rules.push({ parentRule: crtRule.parentRule, index: crtRule.index });
+			crtRule._previous._next = crtRule._next;
+		}
 		if (!crtRule._next) return rules.length > 0 ? rules : null;
 
 		while (crtRule._next.start <= end) {
@@ -134,6 +154,17 @@ export class CssUpdater extends RuleLinkList {
 		}
 		return rmDeclarations.length > 0 ? rmDeclarations : null;
 	}
+}
+
+/**@param {CssRule} cssRule*/
+function getRuleTxt(cssRule) {
+	const ruleInfos = [];
+	ruleInfos.push(cssRule.selector + " {");
+	for (const declaration of cssRule.declarations) {
+		ruleInfos.push(`${declaration.property}: ${declaration.value};`);
+	}
+	ruleInfos.push("}");
+	return ruleInfos.join(" ");
 }
 
 // @ts-ignore

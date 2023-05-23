@@ -14,6 +14,7 @@ export default class RouteServer {
 	userCustom;
 	/** @type {Map<string,object>}*/
 	liveRefresher;
+	logger;
 	/**@protected @param {string} cwd*/
 	constructor(cwd) {
 		this.cwd = cwd;
@@ -38,14 +39,17 @@ export default class RouteServer {
 
 		if (isNavigate) {
 			hasExt(urlPath) || (fileExt = this.docFileExtMap.get(urlPath) || "");
-			const fstat = await stat(this.cwd + urlPath + fileExt).catch((err) => errorPage404(urlPath, res));
+			const fstat = await stat(this.cwd + urlPath + fileExt).catch((err) => {
+				errorPage404(urlPath, res);
+				this.logger.log(`[${new Date().toLocaleTimeString()}] ${urlPath} 404 error`);
+			});
 			if (!fstat) return;
 			if (fstat.isDirectory()) {
 				const dirPanelPath = path.join(this.extensionPath, "/dir-panel/index.hbs");
 				return serveFile(dirPanelPath, res);
 			}
 			// this.#addCustomHeaders(res);
-			console.log(new Date().toLocaleTimeString().slice(0, -3), urlPath);
+			this.logger.log(`[${new Date().toLocaleTimeString()}] ${urlPath}`);
 		} else if (urlPath.startsWith("/dir-panel")) {
 			const filePath = this.extensionPath + urlPath;
 			return serveFile(filePath, res);

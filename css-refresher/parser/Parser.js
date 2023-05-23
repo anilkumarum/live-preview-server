@@ -60,7 +60,7 @@ export default class CssParser {
 
 	/** @param {number} end*/
 	#closeRuleBlock(_, __, end) {
-		this.ruleStack.at(-1).end = end + 1; //include }
+		this.ruleStack.at(-1).end = end;
 		this.ruleStack.pop();
 	}
 

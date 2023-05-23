@@ -3,9 +3,7 @@ import { getDirListings } from "./helper.js";
 import ConsoleOutput from "../utils/output-channel.js";
 
 export class WebComm {
-	console = new ConsoleOutput("LPS Preview Console");
-
-	constructor(private webview: vscode.Webview, private cwd: string) {
+	constructor(private webview: vscode.Webview, private cwd: string, private console: ConsoleOutput) {
 		webview.onDidReceiveMessage((message) => this.handlers[message.command](message));
 	}
 

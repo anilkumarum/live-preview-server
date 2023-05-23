@@ -1,10 +1,12 @@
+import { RuleLinkList } from "./parser/RuleLinkList.js";
 import { CssRule, Declaration } from "./parser/cssRule.js";
 import { CssUpdater, State } from "./parser/cssUpdater.js";
+import { CharCode } from "./utils/css-enums.js";
 
 /**
  * @typedef change
  * @type {object}
- * @property {{start:number}} range
+ * @property {{start:object}} range
  * @property {number} rangeOffset
  * @property {number} rangeLength
  * @property {string} text
@@ -17,7 +19,7 @@ import { CssUpdater, State } from "./parser/cssUpdater.js";
  * @property {number[]} parentRule
  * @property {number} index
  * @property {string}[selector]
- * @property {Declaration[]|object}[declarations]
+ * @property {Declaration[]|object}[declaration]
  */
 
 /**
@@ -28,11 +30,11 @@ import { CssUpdater, State } from "./parser/cssUpdater.js";
  * @property {Function} getText
  * @property {Function} getWordRangeAtPosition
  * @property {Function} offsetAt
+ * @property {Function} lineAt
  */
 
-const declarationRx = new RegExp(/[^:]+:[^;]+;/),
-	selectorRx = new RegExp(/[^{}]+{/),
-	selectorTxtRx = new RegExp(/[^{}]+/);
+const declarationRx = new RegExp(/[a-z-]+:[^;]+;/),
+	selectorRx = new RegExp(/\t?([^{]+{)/);
 
 export class CssRefresher extends CssUpdater {
 	/**@param {document} document*/
@@ -45,24 +47,32 @@ export class CssRefresher extends CssUpdater {
 	/**@param {change} change*/
 	getRuleDataAtOffset(change) {
 		const { rangeOffset, text } = change;
-		const crtRule = this.getRuleAtPosition(rangeOffset);
-		if (text.startsWith("\n")) {
-			return crtRule.cssRule && this.shiftForward(crtRule.cssRule, text.length);
+		const { status, cssRule } = this.getRuleAtPosition(rangeOffset);
+
+		if (text.charCodeAt(0) === CharCode.LineBreak || text.charCodeAt(0) === CharCode.Tab) {
+			const nxTDeclarationIdx = RuleLinkList.getNxtDeclarationIdxAfterOffset(cssRule.declarations, rangeOffset);
+			this.shiftLinks(cssRule, text.length, status, nxTDeclarationIdx);
+			cssRule.parentRule && RuleLinkList.shiftParent(cssRule, rangeOffset, text.length);
+			return null;
 		}
 
-		if (!text) return this.#removeRuleAndGetData(change, crtRule.cssRule);
+		if (!text) return this.#removeRuleAndGetData(change, cssRule);
 		if (text.includes("{")) {
-			const { text: selectorTxt, start } = this.#getTxtByRegInDoc(change, selectorTxtRx);
-			const ruleTxt = selectorTxt + text.slice(text.indexOf("{"));
-			const ruleData = { start, ruleTxt };
-			return this.insertNewRule(crtRule, ruleData);
+			const inputInfo = this.#getSelectorTxtInDoc(change);
+			if (!inputInfo) return null;
+			const ruleData = { start: inputInfo.start, ruleTxt: inputInfo.ruleTxt };
+			return this.insertNewRule({ status, cssRule }, ruleData);
 		}
+		if (status === "previous") return this.shiftLinks(cssRule, text.length, status);
+
 		if (text.endsWith(";")) {
-			const { text: declarationTxt, start } = this.#getTxtByRegInDoc(change, declarationRx);
-			const declarationData = { start, declarationTxt };
-			return this.addNewDeclaration(crtRule.cssRule, declarationData);
+			const inputInfo = this.#getDecTxtByRegInDoc(change, declarationRx);
+			if (!inputInfo) return null;
+			const declarationData = { start: inputInfo.start, declarationTxt: inputInfo.text };
+			return this.addNewDeclaration(cssRule, declarationData);
 		}
-		return crtRule.status === "current" && this.#formCrtRuleData(change, crtRule.cssRule);
+
+		if (status === "current") return this.#formCrtRuleData(change, cssRule);
 	}
 
 	/** @param {change} change, @param {CssRule} cssRule, @returns {refreshData} */
@@ -87,13 +97,13 @@ export class CssRefresher extends CssUpdater {
 
 	/** @param {CssRule} cssRule, @param {change} change, @returns {refreshData} */
 	#formRuleDeclarationsData(change, cssRule) {
-		const declarations = this.updateRuleDeclarations(cssRule, change);
-		if (!declarations) return;
+		const declaration = this.updateRuleDeclarations(cssRule, change);
+		if (!declaration) return;
 		return {
 			action: "ruleDeclarations",
 			parentRule: cssRule.parentRule,
 			index: cssRule.index,
-			declarations,
+			declaration,
 		};
 	}
 
@@ -127,9 +137,27 @@ export class CssRefresher extends CssUpdater {
 		return this.#formCrtRuleData(change, crtRule);
 	}
 
+	/** @param {change} change, @returns {{ruleTxt:string,start:number}} */
+	#getSelectorTxtInDoc(change) {
+		const lineNum = change.range.start.line,
+			lineStartPos = change.range.start.with(lineNum, 0);
+
+		const lineTxt = this.document.lineAt(lineNum).text;
+		let i = lineTxt.length;
+		while (lineTxt.charCodeAt(--i) !== CharCode.openingCurly);
+		let selectorEnd = i;
+		while (--i) {
+			const code = lineTxt.charCodeAt(i);
+			if (code === CharCode.LineBreak || code === CharCode.Tab || code === CharCode.Amp) break;
+		}
+		if (lineTxt.charCodeAt(i) === CharCode.LineBreak || lineTxt.charCodeAt(i) === CharCode.Tab) ++i;
+		const ruleTxt = lineTxt.slice(i, selectorEnd) + change.text.slice(change.text.indexOf("{"));
+		return ruleTxt ? { ruleTxt, start: this.document.offsetAt(lineStartPos) + i } : null;
+	}
+
 	/** @param {change} change, @param {RegExp} regrex, @returns {{text:string,start:number}} */
-	#getTxtByRegInDoc(change, regrex) {
+	#getDecTxtByRegInDoc(change, regrex) {
 		const range = this.document.getWordRangeAtPosition(change.range.start, regrex);
-		return { text: this.document.getText(range), start: this.document.offsetAt(range.start) };
+		return range ? { text: this.document.getText(range), start: this.document.offsetAt(range.start) } : null;
 	}
 }

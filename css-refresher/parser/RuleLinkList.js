@@ -35,6 +35,7 @@ export class RuleLinkList {
 	/** @param {CssRule} cssRule,@param {number} position, @returns {CssRule}*/
 	walkBackwardUntil(cssRule, position) {
 		let crtRule = cssRule;
+		if (!crtRule._previous) return null;
 
 		while (crtRule._previous.end >= position) {
 			crtRule = crtRule._previous;
@@ -44,24 +45,26 @@ export class RuleLinkList {
 	}
 
 	/**@param {CssRule} rule, @param {number} offset, @param {boolean} [isInSelector]*/
-	shiftForward(rule, offset, ruleIdx = 0, isInSelector) {
-		rule.end += offset;
-		isInSelector && (rule.selectorEnd += offset);
-		this.shiftDeclarationForward(rule.declarations, offset, ruleIdx);
+	shiftLinks(rule, offset, status, declIdx = 0, isInSelector) {
+		if (status === "current") {
+			rule.end += offset;
+			isInSelector && (rule.selectorEnd += offset);
+			RuleLinkList.shiftDeclarationForward(rule.declarations, offset, declIdx);
+		}
 
 		/**@type {CssRule}*/
 		let nxtRule = rule._next;
 		while (nxtRule) {
 			nxtRule.start += offset;
 			nxtRule.selectorEnd += offset;
-			this.shiftDeclarationForward(nxtRule.declarations, offset, ruleIdx);
+			RuleLinkList.shiftDeclarationForward(nxtRule.declarations, offset);
 			nxtRule.end += offset;
 			nxtRule = nxtRule._next;
 		}
 	}
 
 	/** @param {import("../parser/cssRule.js").Declaration[]} declarations, @param {number} offset*/
-	shiftDeclarationForward(declarations, offset, declIdx = 0) {
+	static shiftDeclarationForward(declarations, offset, declIdx = 0) {
 		if (declIdx === -1) return;
 		for (let index = declIdx; index < declarations.length; index++) {
 			const declaration = declarations[index];
@@ -70,35 +73,8 @@ export class RuleLinkList {
 		}
 	}
 
-	/**@param {CssRule} rule, @param {number} offset, @param {boolean} [isInSelector]*/
-	shiftBackward(rule, offset, ruleIdx = 0, isInSelector) {
-		rule.end -= offset;
-		isInSelector && (rule.selectorEnd -= offset);
-		this.shiftDeclarationBackward(rule.declarations, offset, ruleIdx);
-
-		/**@type {CssRule}*/
-		let nxtRule = rule._next;
-		while (nxtRule) {
-			nxtRule.start -= offset;
-			nxtRule.selectorEnd -= offset;
-			this.shiftDeclarationBackward(nxtRule.declarations, offset, ruleIdx);
-			nxtRule.end -= offset;
-			nxtRule = nxtRule._next;
-		}
-	}
-
-	/** @param {import("../parser/cssRule.js").Declaration[]} declarations, @param {number} offset*/
-	shiftDeclarationBackward(declarations, offset, decrIdx = 0) {
-		if (decrIdx === -1) return;
-		for (let index = decrIdx; index < declarations.length; index++) {
-			const declaration = declarations[index];
-			declaration.start -= offset;
-			declaration.end -= offset;
-		}
-	}
-
 	/**@protected @param {CssRule} crtRule, @param {number} rangeOffset, @param {number} shift*/
-	shiftParent(crtRule, rangeOffset, shift) {
+	static shiftParent(crtRule, rangeOffset, shift) {
 		if (crtRule.end > rangeOffset) crtRule.end += shift;
 
 		let prevRule = crtRule._previous;
@@ -116,7 +92,7 @@ export class RuleLinkList {
 	}
 
 	/** @param {number} position, @param {CssRule} cssRule, @returns {number}*/
-	getCrtDeclarationIndex(position, cssRule) {
+	static getCrtDeclarationIndex(position, cssRule) {
 		for (let index = 0; index < cssRule.declarations.length; index++) {
 			const declaration = cssRule.declarations[index];
 			if (position >= declaration.start && position <= declaration.end) {
@@ -127,7 +103,7 @@ export class RuleLinkList {
 	}
 
 	/**@param {Declaration[]} declarations, @param {number} position, @returns {number}*/
-	getNxtDeclarationIdxAfterOffset(declarations, position) {
+	static getNxtDeclarationIdxAfterOffset(declarations, position) {
 		return declarations.findIndex((declaration) => declaration.start > position);
 	}
 
@@ -138,7 +114,7 @@ export class RuleLinkList {
 	}
 
 	//DEBUG only
-	prettyPrint(rootRule = this.head) {
+	/* 	prettyPrint(rootRule = this.head) {
 		let crtRule = rootRule ?? this.head;
 		crtRule._previous && delete crtRule._previous;
 
@@ -148,9 +124,9 @@ export class RuleLinkList {
 			delete crtRule._previous;
 		}
 		console.log(JSON.stringify(rootRule._next));
-	}
+	} */
 
-	prettyRule({ _next, _previous, ...rule }) {
+	static prettyRule({ _next, _previous, ...rule }) {
 		console.log(rule);
 	}
 }

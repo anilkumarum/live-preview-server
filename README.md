@@ -34,6 +34,12 @@
 - CSS live refresh doesn't update in html file\
   solution: Use css file
 
+# FAQ
+
+1. How to add workspace specific settings
+   ans: Copy setting id from vscode settings page. \
+   Add setting id in `settings.json` inside `.vscode` folder
+
 # Issue Tracking
 
 Please file issues against the [Live Preview Server repository](https://github.com/anilkumarum/live-preview-server/issues).

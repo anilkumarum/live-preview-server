@@ -9,14 +9,14 @@ class StatusBar {
 	}
 
 	setStartCommand() {
-		this.#statusBarItem.text = `Open in browser`;
+		this.#statusBarItem.text = `$(globe) Browser`;
 		this.#statusBarItem.tooltip = this.#setToolTip();
 		this.#statusBarItem.command = "livePreviewServer.start.openBrowser";
 		this.#statusBarItem.show();
 	}
 
 	#setToolTip() {
-		const tooltip = new vscode.MarkdownString(`select browser<br>
+		const tooltip = new vscode.MarkdownString(`Select browser<br>
 		&nbsp;&nbsp;&nbsp;&nbsp;[chrome](command:livePreviewServer.start.chromeBrowser)<br>
 		&nbsp;&nbsp;&nbsp;&nbsp;[firefox](command:livePreviewServer.start.firefoxBrowser)<br>
 		&nbsp;&nbsp;&nbsp;&nbsp;[other](command:other)`);

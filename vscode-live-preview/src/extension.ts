@@ -3,7 +3,9 @@ import { InlinePanel } from "./panel-controller/inlinePanel.js";
 import statusBar from "./utils/status-bar.js";
 import { openBrowser } from "./utils/browser.js";
 import { findHTMLDocument } from "./utils/htmldoc.js";
-import { userConfig, userCustom } from "./panel-controller/config.js";
+import { userConfig, userCustom } from "./utils/config.js";
+import ConsoleOutput from "./utils/output-channel.js";
+import { launchDebug } from "./utils/debug.js";
 
 const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.path;
 
@@ -44,6 +46,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		statusBar.setCloseCommand();
 	});
 
+	const disposableDebug = vscode.commands.registerCommand("livePreviewServer.start.debugServer", async () => {
+		const docPath = await startPreviewServer();
+		await launchDebug(workspaceFolder, port, docPath);
+		statusBar.setCloseCommand();
+	});
+
 	//close server on command
 	const disposableClose = vscode.commands.registerCommand("livePreviewServer.close.server", () => {
 		closePreview();
@@ -54,17 +62,19 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposableChrome);
 	context.subscriptions.push(disposableFirefox);
 	context.subscriptions.push(disposableServer);
+	context.subscriptions.push(disposableDebug);
 	context.subscriptions.push(disposablePanel);
 	context.subscriptions.push(disposableClose);
 
 	async function startPreviewServer() {
 		const { PreviewServer } = require("../../preview-server/build/server.js");
-		//const { PreviewServer } = await import("../../preview-server/server.js");
-
-		previewServer = new PreviewServer(workspaceFolder, context.extensionPath, userConfig, userCustom);
+		// const { PreviewServer } = await import("../../preview-server/server.js");
+		const serverLogger = new ConsoleOutput("LPS server log");
+		const extPath = context.extensionPath;
+		previewServer = new PreviewServer(workspaceFolder, extPath, userConfig, serverLogger, userCustom);
 		port = await previewServer.startServer(port).catch((err) => console.error(err));
 		const document = await findHTMLDocument().catch((err) => console.error(err));
-		await new Promise((r) => setTimeout(r, 10));
+		await new Promise((r) => setTimeout(r, 100));
 
 		if (!document) throw new Error("docPath not available");
 		userConfig.liveRefresh && previewServer.parseLiveRefresher(document);
@@ -128,3 +138,5 @@ export async function activate(context: vscode.ExtensionContext) {
 		previewServer?.closeServer();
 	}
 }
+
+export function deactivate() {}
