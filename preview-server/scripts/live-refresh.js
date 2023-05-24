@@ -23,6 +23,7 @@
  * @property {number} index
  * @property {string} sheetUrl
  * @property {string} [selector]
+ * @property {string}[selectorType]
  * @property {object} [declaration]
  * @property {array} [rmRulesData]
  * @property {string} [ruleTxt]
@@ -45,6 +46,7 @@ export const liveActions = {
 	removeRules: removeRules,
 	removeDeclarations: removeDeclarations,
 	insertRule: insertRule,
+	inlineStyle: replaceInlineStyle,
 };
 //livePreviewIds, setLpsNodeId declare in injected note-id.js
 //>>>>>>>>>>>>>>>> HTMLElement Update >>>>>>>>>>>>>>>>>>>>>>
@@ -57,17 +59,17 @@ function getElem(nodeId) {
 	/**@type {HTMLElement} */
 	highlightedElem = livePreviewIds.get(nodeId)?.deref();
 
-	/* 	if (highlightedElem) {
+	if (highlightedElem) {
 		if (highlightedElem.nodeType === Node.TEXT_NODE) {
-			highlightedElem.parentElement.classList.add("lps-highlighted");
-			highlightedElem.parentElement.scrollIntoView(true);
+			// highlightedElem.parentElement.classList.add("lps-highlighted");
+			highlightedElem.parentElement?.scrollIntoView(true);
 		} else {
-			highlightedElem.classList.add("lps-highlighted");
+			// highlightedElem.classList.add("lps-highlighted");
 			highlightedElem.scrollIntoView(true);
 		}
 
-		setTimeout(removeHighlight, 4000, highlightedElem);
-	} */
+		// setTimeout(removeHighlight, 4000, highlightedElem);
+	}
 	return highlightedElem;
 }
 
@@ -97,7 +99,6 @@ function getNewNodesFrag(patchNodes) {
 			parentElemMap.get(nodeItem.parentId).appendChild(newDomElem);
 			setLpsNodeId(newDomElem);
 			parentElemMap.set(newDomElem.livePreviewId, newDomElem);
-			console.log(parentElemMap);
 		}
 	}
 	return docFrag;
@@ -113,6 +114,7 @@ function insertNewNodes(updateData) {
 function insetNodesIntoDomTree(updateData, nodeFrag) {
 	if (updateData.relative) {
 		const kinDomElem = getElem(updateData.relative.kinNodeId);
+		if (!kinDomElem) return console.error(updateData.relative.kinNodeId + "node not found");
 		if (updateData.relative.relation === "Parent") kinDomElem.append(nodeFrag);
 		else if (updateData.relative.relation === "NextSibling")
 			kinDomElem.parentElement.insertBefore(nodeFrag, kinDomElem);
@@ -214,6 +216,15 @@ function removeNodes(updateData) {
 	}
 }
 
+/**@param {refreshData} updateData */
+function replaceInlineStyle(updateData) {
+	const domElem = getElem(updateData.nodeId);
+	if (!domElem) return;
+	const styleElem = document.createElement("style");
+	styleElem.textContent = updateData.styleData;
+	domElem.replaceWith(styleElem);
+}
+
 /* document.body.addEventListener("click", highlightNodeInVscode);
 function highlightNodeInVscode({ target }) {
 	//TODO websocket message will better
@@ -235,9 +246,9 @@ function updateRuleSelector(updateData) {
 	const rule = parentRule.cssRules[updateData.index];
 	if (!rule) return;
 
-	//TODO at-rule conditionalText
-	if (rule.selectorText !== updateData.selector) {
-		rule.selectorText = updateData.selector;
+	const selector = updateData.selectorType || "selectorText";
+	if (rule[selector] !== updateData.selector) {
+		rule[selector] = updateData.selector;
 		parentRule.deleteRule(updateData.index);
 		parentRule.insertRule(rule.cssText, updateData.index);
 	}
@@ -366,6 +377,16 @@ cssStyleSheet.replace(`.lps-highlighted {
 	30% {
 		background-color: rgba(11, 146, 236, 0.3);
 	}
+}
+
+#lps-status-info {
+	border-radius: 10%/25%;
+	padding: 0.4em 0.6em;
+	color: white;
+	background-color: red;
+	position: fixed;
+	bottom: 1em;
+	right: 1em;
 }`);
 
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, cssStyleSheet];

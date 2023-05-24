@@ -39,6 +39,7 @@ export default class HtmlRefresher extends HtmlUpdater {
 	/**@param {document} document*/
 	constructor(document) {
 		super(document.getText());
+		/**@type {document} */
 		this.document = document;
 	}
 
@@ -81,10 +82,11 @@ export default class HtmlRefresher extends HtmlUpdater {
 		if (elemData.start > node.end) {
 			insertElemData.relative = NodelinkList.findRelativeNode(node, elemData.start);
 		}
-		if (insertElemData.relative || node.type === Node.TEXT) {
-			const isTxtEmpty = node.nodeValue === "";
 
+		if (!insertElemData.relative && node.type === Node.TEXT) {
+			const isTxtEmpty = node.nodeValue === "";
 			if (isTxtEmpty) {
+				node._previous._next = node._next;
 				insertElemData.patchNodes = this.insertNewElems(elemData, node._previous);
 				insertElemData.replaceTxtNodeId = node.id;
 			} else return this.#formSiblingData(change, node);
@@ -93,7 +95,6 @@ export default class HtmlRefresher extends HtmlUpdater {
 			insertElemData.patchNodes = this.insertNewElems(elemData, node);
 			insertElemData.nodeId = node.id;
 		}
-
 		return insertElemData;
 	}
 

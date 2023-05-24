@@ -73,6 +73,7 @@ export const RuleType = {
 	CHARSET_RULE: 27,
 };
 
+/** @readonly @enum {number}*/
 export const AtRules = {
 	charset: RuleType.CHARSET_RULE,
 	"color-profile": RuleType.COLOR_PROFILE_RULE,
@@ -88,4 +89,22 @@ export const AtRules = {
 	namespace: RuleType.NAMESPACE_RULE,
 	page: RuleType.PAGE_RULE,
 	property: RuleType.PROPERTY,
+};
+
+/** @readonly @enum {string}*/
+export const Selector = {
+	[RuleType.CHARSET_RULE]: null,
+	[RuleType.COLOR_PROFILE_RULE]: "name",
+	[RuleType.CONTAINER_RULE]: "conditionText",
+	[RuleType.COUNTER_STYLE_RULE]: "conditionText",
+	[RuleType.FONT_FACE_RULE]: null,
+	[RuleType.FONT_FEATURE_VALUES_RULE]: "fontFamily",
+	[RuleType.FONT_PALETTE_VALUES_RULE]: "fontFamily",
+	[RuleType.IMPORT_RULE]: null,
+	[RuleType.KEYFRAMES_RULE]: "name",
+	[RuleType.LAYER_RULE]: "name",
+	[RuleType.MEDIA_RULE]: "conditionText",
+	[RuleType.NAMESPACE_RULE]: "",
+	[RuleType.PAGE_RULE]: "selectorText",
+	[RuleType.PROPERTY]: "name",
 };

@@ -1,5 +1,7 @@
 // import { performance } from "node:perf_hooks";
 import * as vscode from "vscode";
+import { userConfig } from "./config.js";
+import { Command, LaunchBrowsers } from "./constant.js";
 
 class StatusBar {
 	#statusBarItem: vscode.StatusBarItem;
@@ -11,23 +13,30 @@ class StatusBar {
 	setStartCommand() {
 		this.#statusBarItem.text = `$(globe) Browser`;
 		this.#statusBarItem.tooltip = this.#setToolTip();
-		this.#statusBarItem.command = "livePreviewServer.start.openBrowser";
+		this.#statusBarItem.command = Command.LaunchDefault;
 		this.#statusBarItem.show();
 	}
 
 	#setToolTip() {
-		const tooltip = new vscode.MarkdownString(`Select browser<br>
-		&nbsp;&nbsp;&nbsp;&nbsp;[chrome](command:livePreviewServer.start.chromeBrowser)<br>
-		&nbsp;&nbsp;&nbsp;&nbsp;[firefox](command:livePreviewServer.start.firefoxBrowser)<br>
-		&nbsp;&nbsp;&nbsp;&nbsp;[other](command:other)`);
+		const tooltip = new vscode.MarkdownString(`Select browser<br>${this.getBrowserList()}`);
 		tooltip.supportHtml = true;
 		tooltip.isTrusted = true;
 		return tooltip;
 	}
 
+	getBrowserList() {
+		//TODO other quickpick item
+		let browsers = userConfig.toolTipBrowsers.map(
+			(browser) =>
+				`&nbsp;&nbsp;&nbsp;&nbsp;[${browser}](command:${LaunchBrowsers[browser ?? Command.LaunchDefault]})`
+		);
+
+		return browsers.join("<br>");
+	}
+
 	setCloseCommand() {
 		this.#statusBarItem.text = "Close Server";
-		this.#statusBarItem.command = "livePreviewServer.close.server";
+		this.#statusBarItem.command = Command.CloseServer;
 		this.#statusBarItem.tooltip = "close live preview server";
 	}
 

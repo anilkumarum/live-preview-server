@@ -8,11 +8,20 @@ export const State = {
 };
 
 export class CssUpdater extends RuleLinkList {
+	/**@type {CssParser} */
+	#parser;
 	/** @param {string} buffer*/
 	constructor(buffer) {
 		super();
-		this.parser = new CssParser(this);
-		this.isParsedSuccess = this.parser.parse(buffer);
+		this.#parser = new CssParser(this);
+		this.isParsedSuccess = this.#parser.parse(buffer);
+	}
+
+	reParseOnSave() {
+		this.#parser.resetIdx();
+		this.head = { _next: null };
+		this.crtRule = this.head;
+		this.#parser.parse(this.document.getText());
 	}
 
 	/**@param {{status:string,cssRule:CssRule}} crtRule, @param {{start:number,ruleTxt:string}}ruleData*/
@@ -130,7 +139,10 @@ export class CssUpdater extends RuleLinkList {
 			rules.push({ parentRule: crtRule.parentRule, index: crtRule.index });
 			crtRule._previous._next = crtRule._next;
 		}
-		if (!crtRule._next) return rules.length > 0 ? rules : null;
+		if (!crtRule._next) {
+			for (const rule of rules) this.parser.updateChildIdx(rule.parentRule);
+			return rules.length > 0 ? rules : null;
+		}
 
 		while (crtRule._next.start <= end) {
 			crtRule = crtRule._next;
@@ -140,7 +152,7 @@ export class CssUpdater extends RuleLinkList {
 			}
 			if (!crtRule || !crtRule._next) break;
 		}
-
+		for (const rule of rules) this.parser.updateChildIdx(rule.parentRule);
 		return rules.length > 0 ? rules : null;
 	}
 

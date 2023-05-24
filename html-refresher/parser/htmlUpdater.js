@@ -1,5 +1,5 @@
 import HTMLParser from "./Parser.js";
-import { Attribute, Element, TxtNode } from "./node.js";
+import { Attribute, Element, Node, TxtNode } from "./node.js";
 import { NodelinkList, State } from "./nodelinkList.js";
 
 const attrRx = new RegExp(/([^=]+)="([^"]+)/);
@@ -12,6 +12,13 @@ export class HtmlUpdater extends NodelinkList {
 		super();
 		this.#parser = new HTMLParser(this);
 		this.isParsedSuccess = this.#parser.parse(buffer);
+	}
+
+	reParseOnSave() {
+		this.head = { _next: null };
+		this.crtNode = this.head;
+		Node.nodeCount = -1;
+		this.#parser.parse(this.document.getText());
 	}
 
 	//parse elem str and insert node

@@ -24,6 +24,19 @@ export default class CssParser {
 		return this.ruleStack.length === 0 || isFinish;
 	}
 
+	resetIdx() {
+		this.#childIdx = { null: -1 };
+		this.ruleStack = [];
+	}
+
+	//after rule delete, update index
+	/**@public @param {Array} parentRule*/
+	updateChildIdx(parentRule) {
+		const parentId = String(parentRule);
+		if (this.#childIdx[parentId] === undefined) return;
+		--this.#childIdx[parentId];
+	}
+
 	#getRuleIndex() {
 		let parentRule = null;
 		if (this.ruleStack.length !== 0) {

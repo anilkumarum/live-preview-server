@@ -16,14 +16,22 @@ evtSource.onmessage = async (event) => {
 };
 evtSource.addEventListener("notice", (event) => {
 	const data = event.data;
-	if (data.startsWith("hmr")) return console.info("%c" + data, "color:cyan");
+	console.info("%c" + data, "color:cyan");
 	// if(data.startsWith("config"))
 });
 
 evtSource.addEventListener("pagenav", (event) => {
 	location.assign(event.data);
 });
-evtSource.onerror = () => evtSource.close();
+evtSource.onerror = () => (showConnectionLost(), evtSource.close());
+
+function showConnectionLost() {
+	const statusMsg = document.createElement("output");
+	statusMsg.id = "lps-status-info";
+	statusMsg.textContent = "⚠️ Disconnected";
+	document.body.appendChild(statusMsg);
+	console.log(statusMsg);
+}
 
 const updateFiles = {
 	css: updateCSSSheet,

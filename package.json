@@ -1,7 +1,7 @@
 {
 	"name": "live-preview-server",
 	"displayName": "Live Preview Server",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"description": "dependency free native nodejs live preview server. embedded live html preview. lightweight and ultra fast",
 	"publisher": "anilkumarum",
 	"license": "GPL-3.0-only",
@@ -60,7 +60,7 @@
 				"category": "LPS"
 			},
 			{
-				"command": "livePreviewServer.start.openBrowser",
+				"command": "livePreviewServer.start.defaultBrowser",
 				"title": "Start preview in default browser",
 				"category": "LPS"
 			},
@@ -75,7 +75,7 @@
 				"category": "LPS"
 			},
 			{
-				"command": "livePreviewServer.start.server",
+				"command": "livePreviewServer.start.lpsServer",
 				"title": "Start live preview server",
 				"category": "LPS"
 			},
@@ -109,13 +109,19 @@
 		"keybindings": [
 			{
 				"command": "livePreviewServer.start.inlinePreview",
-				"key": "alt+L alt+I",
+				"key": "ctrl+alt+v",
 				"when": "editorTextFocus",
 				"mac": "cmd+L cmd+I"
 			},
 			{
 				"command": "livePreviewServer.start.openBrowser",
 				"key": "alt+L alt+B",
+				"when": "editorTextFocus",
+				"mac": "cmd+L cmd+B"
+			},
+			{
+				"command": "livePreviewServer.start.debugServer",
+				"key": "ctrl+F10",
 				"when": "editorTextFocus",
 				"mac": "cmd+L cmd+B"
 			}
@@ -133,15 +139,6 @@
 					"default": false,
 					"description": "toggle hmr on custom elements"
 				},
-				"livePreviewServer.config.defaultBrowser": {
-					"enum": [
-						"Chrome",
-						"Firefox",
-						"Default"
-					],
-					"default": "Default",
-					"description": "change default browser"
-				},
 				"livePreviewServer.config.serverPort": {
 					"type": "number",
 					"default": 2200,
@@ -154,27 +151,43 @@
 					"default": ".",
 					"description": "Change base directory"
 				},
+				"livePreviewServer.config.defaultBrowser": {
+					"enum": [
+						"Chrome",
+						"Firefox",
+						"Brave",
+						"Default"
+					],
+					"default": "Default",
+					"description": "Change default browser"
+				},
+				"livePreviewServer.config.toolTipBrowsers": {
+					"type": "array",
+					"default": [
+						"Chrome",
+						"Firefox",
+						"other"
+					],
+					"description": "Add or remove Browser list in status-bar tooltip"
+				},
 				"livePreviewServer.config.updateBrowserPath": {
 					"type": "object",
 					"default": {
-						"Chrome": "chrome",
-						"Firefox": "firefox"
+						"Chrome": "",
+						"Firefox": "",
+						"Brave": ""
 					},
 					"description": "add or edit browser path"
 				},
+				"livePreviewServer.config.compileTs": {
+					"type": "boolean",
+					"default": false,
+					"description": "Compile ts. import typescript with .ts extension"
+				},
 				"livePreviewServer.custom.httpHeaders": {
 					"type": "object",
-					"default": {
-						"Accept-Ranges": "bytes"
-					},
-					"description": "add own custom http headers"
-				},
-				"livePreviewServer.ChromeDebuggingAttachment": {
-					"type": [
-						"boolean"
-					],
-					"default": false,
-					"description": "Enable Chrome Debugging Attachment to Live Server at Debuging Port 9222.\n NOTE: You have to install 'Debugger for Chrome' \nIf the value is true, Select 'Attach to Chrome' from Debug Window to start debugging. \n\n CAUTION: If it is true, 'Launch Chrome against localhost' may not work."
+					"default": null,
+					"description": "add own custom http headers in key:value format"
 				}
 			}
 		},

@@ -24,22 +24,6 @@ import { getNextOpenPort } from "./utils/port.js";
  * @property {Function} offsetAt
  */
 
-/** @param {ServerResponse} res */
-function connectClient(res, logger) {
-	logger.log("✅ 'Client connected'");
-	logger.log("⌛ Waiting for file change...");
-	res.writeHead(200, {
-		"Access-Control-Allow-Origin": "*",
-		"Access-Control-Allow-Methods": "GET,OPTIONS",
-		"Access-Control-Allow-Private-Network": "true",
-		"Access-Control-Allow-Headers": "Cache-Control",
-		"Content-Type": "text/event-stream",
-		"Cache-Control": "no-cache",
-		Connection: "keep-alive",
-	});
-	res.write(`event:notice\ndata:lps hmr connected\n\n`);
-}
-
 const created = (logger, port) => logger.log(`🔴 Preview server running at ${port} port`);
 
 let HtmlRefresher, CssRefresher;
@@ -56,6 +40,7 @@ export class PreviewServer extends RouteServer {
 	/** @type {number}*/
 	port;
 	isRunning = false;
+	clientConnect;
 
 	/**@param {string}cwd, @param {string}extensionPath, @param {object}userConfig, @param {object}userCustom */
 	constructor(cwd, extensionPath, userConfig, logger, userCustom) {
@@ -64,6 +49,7 @@ export class PreviewServer extends RouteServer {
 		userConfig.liveRefresh && loadRefresher();
 		this.liveRefresher = new Map();
 		this.userCustom = userCustom;
+		this.userConfig = userConfig;
 		this.logger = logger;
 		this.isLiveFresh = userConfig.liveRefresh;
 	}
@@ -79,14 +65,35 @@ export class PreviewServer extends RouteServer {
 			this.#server.once("error", () => reject("cannot start server at port " + port));
 			this.#server.once("listening", () => {
 				this.isRunning = true;
+				this.logger.log(`Local: http://localhost:${port}/paths`);
 				resolve(port);
 			});
 			this.#server.once("close", () => {
 				this.isRunning = false;
+				this.#res.end();
 				this.logger.log("Live Server Stopped");
 				this.logger.dispose();
 			});
 		});
+	}
+
+	/** @param {ServerResponse} res */
+	#connectClient(res) {
+		if (!this.clientConnect) {
+			this.logger.log("✅ 'Client connected'");
+			this.logger.log("⌛ Waiting for file change...");
+			this.clientConnect = true;
+		}
+		res.writeHead(200, {
+			"Access-Control-Allow-Origin": "*",
+			"Access-Control-Allow-Methods": "GET,OPTIONS",
+			"Access-Control-Allow-Private-Network": "true",
+			"Access-Control-Allow-Headers": "Cache-Control",
+			"Content-Type": "text/event-stream",
+			"Cache-Control": "no-cache",
+			Connection: "keep-alive",
+		});
+		res.write(`event:notice\ndata:LPS Hmr connected\n\n`);
 	}
 
 	/** @type {import("node:http").RequestListener} */
@@ -94,7 +101,7 @@ export class PreviewServer extends RouteServer {
 		const [urlPath, searchParams] = request.url.split("?", 2);
 		if (urlPath === "/ws") {
 			this.#res = res;
-			return connectClient(res, this.logger);
+			return this.#connectClient(res);
 		}
 
 		request.method === "GET"
@@ -103,19 +110,24 @@ export class PreviewServer extends RouteServer {
 	};
 
 	closeServer() {
+		this.logger.log("Live Server Stopping...");
 		this.#server.close();
 	}
 
 	/** @param {document} textDoc*/
-	onTxtDocumentActive(textDoc) {
+	changePageUrl(textDoc) {
 		if (!docLangId.has(textDoc.languageId)) return;
 		const pageUrl = this.#getRelativePath(textDoc.fileName);
+		if (pageUrl === this.crtPageUrl) return;
 		this.#res?.write(`event:pagenav\ndata:${pageUrl}\n\n`);
 	}
 
-	/** @param {string} filePath */
-	reloadOnSave = (filePath) => {
-		filePath = this.#getRelativePath(filePath);
+	/** @param {document} textDoc*/
+	reloadOnSave = (textDoc) => {
+		if (this.liveRefresher && this.liveRefresher.has(textDoc.fileName)) {
+			this.liveRefresher.get(textDoc.fileName).reParseOnSave();
+		}
+		const filePath = this.#getRelativePath(textDoc.fileName);
 		this.#res?.write(`data:${filePath}\n\n`);
 	};
 
@@ -131,7 +143,7 @@ export class PreviewServer extends RouteServer {
 		const htmlRefresher = this.liveRefresher.get(document.fileName);
 		// if (!htmlRefresher) this.onTxtDocumentOpen(document);
 		const updateData = htmlRefresher.getElemDataAtOffset(change);
-		// console.log(updateData);
+		//console.log(updateData);
 		updateData && this.#setJsonRes(updateData);
 	};
 
@@ -152,7 +164,9 @@ export class PreviewServer extends RouteServer {
 	/** @param {document} textDoc*/
 	async parseLiveRefresher(textDoc) {
 		if (!this.isLiveFresh) return;
-		if (!HtmlRefresher) await new Promise((r) => setTimeout(r, 100));
+		if (!HtmlRefresher) await new Promise((r) => setTimeout(r, 100)); //temp
+		if (this.liveRefresher.has(textDoc.fileName)) return;
+
 		if (docLangId.has(textDoc.languageId)) this.liveRefresher.set(textDoc.fileName, new HtmlRefresher(textDoc));
 		else if (textDoc.languageId === "css") this.liveRefresher.set(textDoc.fileName, new CssRefresher(textDoc));
 	}

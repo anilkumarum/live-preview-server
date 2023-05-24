@@ -16,7 +16,6 @@ export async function serveFile(filePath, res) {
 		const fd = await open(filePath);
 		if (fd) {
 			const fileExt = extname(filePath);
-			//TODO add support for add custom headers
 			res.writeHead(200, { "Content-Type": fileTypes[fileExt] });
 			const stream = fd.createReadStream();
 

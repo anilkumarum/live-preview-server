@@ -1,7 +1,7 @@
 import { RuleLinkList } from "./parser/RuleLinkList.js";
 import { CssRule, Declaration } from "./parser/cssRule.js";
 import { CssUpdater, State } from "./parser/cssUpdater.js";
-import { CharCode } from "./utils/css-enums.js";
+import { CharCode, Selector } from "./utils/css-enums.js";
 
 /**
  * @typedef change
@@ -19,6 +19,7 @@ import { CharCode } from "./utils/css-enums.js";
  * @property {number[]} parentRule
  * @property {number} index
  * @property {string}[selector]
+ * @property {string}[selectorType]
  * @property {Declaration[]|object}[declaration]
  */
 
@@ -33,15 +34,14 @@ import { CharCode } from "./utils/css-enums.js";
  * @property {Function} lineAt
  */
 
-const declarationRx = new RegExp(/[a-z-]+:[^;]+;/),
-	selectorRx = new RegExp(/\t?([^{]+{)/);
+const declarationRx = new RegExp(/[a-z-]+:[^;]+;/);
 
 export class CssRefresher extends CssUpdater {
 	/**@param {document} document*/
 	constructor(document) {
 		super(document.getText());
+		/**@type {document}*/
 		this.document = document;
-		console.log("css parsed");
 	}
 
 	/**@param {change} change*/
@@ -92,6 +92,7 @@ export class CssRefresher extends CssUpdater {
 			parentRule: cssRule.parentRule,
 			index: cssRule.index,
 			selector,
+			selectorType: Selector[cssRule.type],
 		};
 	}
 

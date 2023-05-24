@@ -5,7 +5,6 @@ const CharCode = {
 	Dot: 46,
 	Slash: 0x2f, // /
 };
-/**@param {string} filepath,@returns {string}*/
 
 /**@param {string} filepath*/
 export function extname(filepath) {
@@ -56,8 +55,8 @@ export async function createFileExtMap(cwd, fileExtMap) {
 	await Promise.all(promises).catch((err) => console.error(err));
 }
 
-/**@param {string} filePath, @param {ServerResponse} res*/
-export function err404(filePath, res) {
+/**@param {string} urlPath, @param {ServerResponse} res*/
+export function err404(urlPath, res) {
 	res.writeHead(404);
-	res.end("file not found");
+	res.end(urlPath + " file not found");
 }

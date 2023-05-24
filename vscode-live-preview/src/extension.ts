@@ -6,54 +6,49 @@ import { findHTMLDocument } from "./utils/htmldoc.js";
 import { userConfig, userCustom } from "./utils/config.js";
 import ConsoleOutput from "./utils/output-channel.js";
 import { launchDebug } from "./utils/debug.js";
+import { Command } from "./utils/constant.js";
 
 const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.path;
 
 export async function activate(context: vscode.ExtensionContext) {
-	let port = 2200;
+	let port = userConfig.serverPort || 2200;
 	let previewServer;
-	const disposableBrowser = vscode.commands.registerCommand("livePreviewServer.start.openBrowser", async () => {
+	const disposableBrowser = vscode.commands.registerCommand(Command.LaunchDefault, async () => {
 		const docPath = await startPreviewServer();
 		openBrowser("default", `${port}${docPath}`);
 		statusBar.setCloseCommand();
 	});
 
-	const disposableChrome = vscode.commands.registerCommand(
-		"livePreviewServer.start.chromeBrowser",
-		async () => {
-			const docPath = await startPreviewServer();
-			openBrowser("chrome", `${port}${docPath}`);
-			statusBar.setCloseCommand();
-		}
-	);
+	const disposableChrome = vscode.commands.registerCommand(Command.LaunchChrome, async () => {
+		const docPath = await startPreviewServer();
+		openBrowser("chrome", `${port}${docPath}`);
+		statusBar.setCloseCommand();
+	});
 
-	const disposableFirefox = vscode.commands.registerCommand(
-		"livePreviewServer.start.firefoxBrowser",
-		async () => {
-			const docPath = await startPreviewServer();
-			openBrowser("firefox", `${port}${docPath}`);
-			statusBar.setCloseCommand();
-		}
-	);
+	const disposableFirefox = vscode.commands.registerCommand(Command.LaunchFirefox, async () => {
+		const docPath = await startPreviewServer();
+		openBrowser("firefox", `${port}${docPath}`);
+		statusBar.setCloseCommand();
+	});
 
-	const disposablePanel = vscode.commands.registerCommand("livePreviewServer.start.inlinePreview", async () => {
+	const disposablePanel = vscode.commands.registerCommand(Command.InlinePreview, async () => {
 		const docPath = await startPreviewServer();
 		InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder, port, closePreview);
 	});
 
-	const disposableServer = vscode.commands.registerCommand("livePreviewServer.start.server", async () => {
+	const disposableServer = vscode.commands.registerCommand(Command.StartServer, async () => {
 		await startPreviewServer();
 		statusBar.setCloseCommand();
 	});
 
-	const disposableDebug = vscode.commands.registerCommand("livePreviewServer.start.debugServer", async () => {
+	const disposableDebug = vscode.commands.registerCommand(Command.DebugServer, async () => {
 		const docPath = await startPreviewServer();
 		await launchDebug(workspaceFolder, port, docPath);
 		statusBar.setCloseCommand();
 	});
 
 	//close server on command
-	const disposableClose = vscode.commands.registerCommand("livePreviewServer.close.server", () => {
+	const disposableClose = vscode.commands.registerCommand(Command.CloseServer, () => {
 		closePreview();
 		statusBar.setStartCommand();
 	});
@@ -93,7 +88,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 		var disposableOnDidSave = vscode.workspace.onDidSaveTextDocument(async (textDocument) => {
 			// runCustomCommand("runCompileCommand");
-			previewServer.reloadOnSave(textDocument.fileName);
+			previewServer.reloadOnSave(textDocument);
 		});
 
 		var disposableOnDidChange = vscode.window.onDidChangeActiveTextEditor(async (textEditor) => {
@@ -103,7 +98,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				if (textDocument.languageId === "html" || textDocument.languageId === "css")
 					previewServer.parseLiveRefresher(textDocument);
 			}
-			previewServer.onTxtDocumentActive(textDocument);
+			previewServer.changePageUrl(textDocument);
 		});
 
 		/* const disposableOnOpen = vscode.workspace.onDidOpenTextDocument(async (textDocument) => {

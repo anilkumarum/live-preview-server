@@ -29,6 +29,14 @@ export class Tokenizer extends EventEmitter {
 		return true;
 	}
 
+	#midBreakforwardUntil(code, midCode) {
+		while (this.buffer.charCodeAt(++this.index) !== code) {
+			if (this.index === this.size) return this.parseError(code);
+			if (this.buffer.charCodeAt(this.index) === midCode) break;
+		}
+		return true;
+	}
+
 	#skipComment() {
 		++this.index; //skip *
 		this.#fastForwardTo(CharCode.Asterisk);
@@ -68,17 +76,19 @@ export class Tokenizer extends EventEmitter {
 	}
 
 	#stateBeforeAtRuleBlock() {
-		let sectionStart = this.index;
+		this.sectionStart = this.index;
 		this.#fastForwardTo(CharCode.Space);
-		const atRule = this.buffer.slice(sectionStart, this.index);
+		const atRule = this.buffer.slice(this.sectionStart, this.index);
 		if (AtRules[atRule]) {
-			this.sectionStart = this.index = sectionStart;
+			this.sectionStart = this.index + 1;
 			this.#stateInAtRuleBlock(atRule);
 		}
 	}
 
 	#stateInAtRuleBlock(atRule) {
-		this.#fastForwardTo(CharCode.openingCurly);
+		atRule !== "layer"
+			? this.#fastForwardTo(CharCode.openingCurly)
+			: this.#midBreakforwardUntil(CharCode.openingCurly, CharCode.SemiColon);
 		this.#emitData("openrule", atRule);
 		this.state = State.BeforeSelector;
 	}
