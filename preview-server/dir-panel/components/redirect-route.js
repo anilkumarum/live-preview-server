@@ -35,8 +35,10 @@ export class RedirectRoute extends HTMLElement {
 			body: JSON.stringify(payload),
 		})
 			.then((response) => {
-				response.ok && response.json();
+				response.ok && response.text();
 				this.addInputBox({ target });
+				target.classList.add("saved");
+				toast("path saved");
 			})
 			.then((data) => console.log(data))
 			.catch((err) => console.error(err));

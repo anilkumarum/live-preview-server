@@ -14,7 +14,6 @@ export default class ConsoleOutput {
 
 	constructor(channel) {
 		this.#msgChannel = vscode.window.createOutputChannel(channel, "javascript");
-		this.#msgChannel.show();
 	}
 
 	write(method: string, msg: string) {

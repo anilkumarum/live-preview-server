@@ -3,7 +3,7 @@
 - Updates your files instantly while typing on your keyboard
 - Don't need to leave vscode. Embedded inline preview
 - Url path completion intellisense in embedded preview
-- file extension (.html) don't require in url
+- file extension **(.html)** don't require in url
 - Link multiple custom routes on any file url [know more]()
 - Option to choose browser in status bar [know more]()
 - Typescript support out of box [know more]().
@@ -16,6 +16,8 @@
 ### HTML File Previewing
 
 Preview your HTML files quickly by clicking the preview button in the top right corner of your editor or using the context menu.
+
+![embedded-preview](https://raw.githubusercontent.com/anilkumarum/live-preview-server/embedded-preview.gif)
 
 ### Live Refreshing
 
@@ -37,10 +39,12 @@ live refresh is the reason for writing whole extension from scratch.
 #### In embedded preview
 
 **Live Preview Server** show path completion same as vscode show in `src=""` or `import('')`.
+![path-intellisense](https://raw.githubusercontent.com/anilkumarum/live-preview-server/path-intellisense.gif)
 
 #### In browser
 
 Go to `/paths` and hover over file and directories tree then press enter key.
+![directory-listing](https://raw.githubusercontent.com/anilkumarum/live-preview-server/directory-listing.gif)
 
 ### Map custom paths with file paths
 
@@ -65,6 +69,7 @@ keyboard shortcuts:`ctrl+alt+v`
 
 Launch any browser from status bar in one click.\
 Choose and launch different browser from status bar in one click.
+![external-browser](https://raw.githubusercontent.com/anilkumarum/live-preview-server/external-browser.gif)
 
 ### External Browser Debugging
 

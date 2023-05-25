@@ -24,3 +24,4 @@ panel-ui/address-bar.scss
 pnpm-lock.yaml
 rollup.config.mjs
 docs
+images

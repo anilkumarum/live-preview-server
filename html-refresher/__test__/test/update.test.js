@@ -2,8 +2,10 @@ import { strictEqual } from "node:assert";
 import { describe, it, before } from "node:test";
 import { document } from "../data/html.js";
 import HtmlRefresher from "../../htmlRefresher.js";
+import { updateTxtNode, updateTxtNode2 } from "../data/snapshot.js";
 
 const htmlRefresher = new HtmlRefresher(document);
+const prettyNode = ({ _next, _previous, ...rule }) => JSON.stringify(rule);
 
 describe("updateSelector", () => {
 	/*     before(function() {
@@ -12,49 +14,48 @@ describe("updateSelector", () => {
 
 	it("appendTxtNode", () => {
 		function updateNode(change) {
-			const node = htmlRefresher.getNodeAtPosition(change.rangeOffset);
-			const updateData = htmlRefresher.updateTxtNode(node, change);
-			strictEqual(updateData, "first update lorem ");
+			const node = htmlRefresher.getNearestNodeAt(change.rangeOffset);
+			htmlRefresher.updateTxtNode(node, change);
+			const newNode = htmlRefresher.getNearestNodeAt(change.rangeOffset + 2);
+			strictEqual(prettyNode(newNode), updateTxtNode);
 		}
 
-		const change = { rangeOffset: 29, rangeLength: 0, text: "update " };
-		updateNode(change);
+		const change2 = { rangeOffset: 4, rangeLength: 0, text: "this " };
+		updateNode(change2);
 	});
 
 	it("removeTxtFromTxtNode", () => {
 		function updateNode(change) {
-			const node = htmlRefresher.getNodeAtPosition(change.rangeOffset);
-			htmlRefresher.prettyNode(node);
-			const newValue = htmlRefresher.updateTxtNode(node, change);
-			strictEqual(newValue, "first lorem ");
-			const node2 = htmlRefresher.getNodeAtPosition(change.rangeOffset);
-			htmlRefresher.prettyNode(node2);
+			const node = htmlRefresher.getNearestNodeAt(change.rangeOffset);
+			htmlRefresher.updateTxtNode(node, change);
+			const newNode = htmlRefresher.getNearestNodeAt(change.rangeOffset);
+			strictEqual(prettyNode(newNode), updateTxtNode2);
 		}
 
-		const change8 = { rangeOffset: 29, rangeLength: 7, text: "" };
-		updateNode(change8);
+		const changet2 = { rangeOffset: 4, rangeLength: 5, text: "" };
+		updateNode(changet2);
 	});
 
 	it("changeTagName", () => {
 		function updateElem(change) {
-			const node = htmlRefresher.getNodeAtPosition(change.rangeOffset);
-			htmlRefresher.prettyNode(node);
-			const newTag = htmlRefresher.updateElemTagName(node, change);
-			strictEqual(newTag, "div");
+			const node = htmlRefresher.getNearestNodeAt(change.rangeOffset);
+			htmlRefresher.updateElemTagName(node, change);
+			const newNode = htmlRefresher.getNearestNodeAt(change.rangeOffset + 1);
+			strictEqual(prettyNode(newNode), updateTagName);
 		}
 
-		const change = { rangeOffset: 36, rangeLength: 6, text: "div" };
+		const change = { rangeOffset: 41, rangeLength: 2, text: "list" };
 		updateElem(change);
 	});
 
 	it("changeAttrName", () => {
 		function updatAttribute(change) {
-			const node = htmlRefresher.getNodeAtPosition(change.rangeOffset);
+			const node = htmlRefresher.getNearestNodeAt(change.rangeOffset);
 			const attrData = htmlRefresher.updateElemAttribute(node, change);
-			strictEqual(JSON.stringify(attrData), JSON.stringify({ oldTxt: "class", prop: "name", data: "id" }));
+			strictEqual(JSON.stringify(attrData), JSON.stringify({ oldTxt: "id", prop: "name", data: "data-id" }));
 		}
 
-		const change2 = { rangeOffset: 9, rangeLength: 5, text: "id" };
-		updatAttribute(change2);
+		const change4 = { rangeOffset: 46, rangeLength: 0, text: "data-" };
+		updatAttribute(change4);
 	});
 });

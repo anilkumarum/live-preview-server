@@ -101,8 +101,8 @@ export class AddressBar extends HTMLElement {
 	}
 
 	connectedCallback() {
+		port = this.getAttribute("port") || "2200";
 		this.innerHTML = this.render();
-		port = this.getAttribute("port") || "3300";
 		elem.backBtn = this.firstElementChild;
 		elem.forwardBtn = this.children[1];
 		elem.addressInput = this.children[4].firstElementChild;
@@ -224,15 +224,6 @@ function getCurPathRange() {
 function openDevTools({ target }) {
 	vscode.postMessage({ command: "openDevTools" });
 	target.closest("details").open = false;
-}
-//console override
-const types = ["log", "info", "error", "warn"];
-for (const type of types) {
-	console[type] = function () {
-		let args = [];
-		for (const arg of arguments) args.push(typeof arg === "object" ? JSON.stringify(arg) : arg);
-		vscode.postMessage({ command: "console", type, args: args.join(" ") });
-	};
 }
 
 customElements.define("address-bar", AddressBar);

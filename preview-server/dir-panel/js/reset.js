@@ -10,11 +10,11 @@ globalThis.$onO = (target, type, callback) => target.addEventListener(type, call
 // Get element by CSS selector:
 globalThis.$ = (selector, scope) => (scope || document).querySelector(selector);
 
-/* const snackbar = document.createElement("output");
+const snackbar = document.createElement("output");
 snackbar.hidden = true;
 document.body.appendChild(snackbar);
 globalThis.toast = (msg) => {
 	snackbar.hidden = false;
 	snackbar.innerText = msg;
 	setTimeout(() => (snackbar.hidden = true), 4100);
-}; */
+};

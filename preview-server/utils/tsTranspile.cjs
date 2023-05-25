@@ -1,5 +1,5 @@
-const { readFile } = require("node:fs/promises");
-// import { readFile } from "node:fs/promises";
+// const { readFile } = require("node:fs/promises");
+import { readFile } from "node:fs/promises";
 
 const ModuleKind = {
 	ES2022: 7,
@@ -34,9 +34,9 @@ process.platform === "win32" &&
 	(typescriptPath = `C:\\Users\\${process.env.USERNAME}\\AppData\\Roaming\\npm\\node_modules`);
 
 /**@param {string}filePath, @returns {Promise<string>} */
-// export async function transformTS(filePath) {
-exports.transformTS = transformTS;
-async function transformTS(filePath) {
+export async function transformTS(filePath) {
+	// exports.transformTS = transformTS;
+	// async function transformTS(filePath) {
 	try {
 		const { transpileModule } = require(typescriptPath);
 		const content = await readFile(filePath, { encoding: "utf8" });

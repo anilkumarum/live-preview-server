@@ -11,6 +11,7 @@ export class HtmlUpdater extends NodelinkList {
 	constructor(buffer) {
 		super();
 		this.#parser = new HTMLParser(this);
+		/**@type {boolean} */
 		this.isParsedSuccess = this.#parser.parse(buffer);
 	}
 

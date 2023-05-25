@@ -30,15 +30,15 @@ export class CssUpdater extends RuleLinkList {
 		this.crtRule = crtRule.cssRule;
 		const parentRule =
 			crtRule.status === "current" ? this.crtRule : this.findParentRule(crtRule.cssRule, ruleData.start);
-		parentRule && this.parser.ruleStack.push(parentRule);
-		this.parser.parse(ruleData.ruleTxt, ruleData.start);
+		parentRule && this.#parser.ruleStack.push(parentRule);
+		this.#parser.parse(ruleData.ruleTxt, ruleData.start);
 		const offset = ruleData.ruleTxt.length;
 		this.shiftLinks(crtRule.cssRule._next, offset);
 		parentRule && RuleLinkList.shiftParent(crtRule.cssRule, ruleData.start, offset);
 		return this.crtRule.declarations.length !== 0
 			? {
 					action: "insertRule",
-					parentRule: this.crtRule.parentRule,
+					parentRule: parentRule ? [...(parentRule.parentRule || []), parentRule.index] : null,
 					index: this.crtRule.index,
 					ruleTxt: getRuleTxt(this.crtRule),
 			  }
@@ -140,7 +140,7 @@ export class CssUpdater extends RuleLinkList {
 			crtRule._previous._next = crtRule._next;
 		}
 		if (!crtRule._next) {
-			for (const rule of rules) this.parser.updateChildIdx(rule.parentRule);
+			for (const rule of rules) this.#parser.updateChildIdx(rule.parentRule);
 			return rules.length > 0 ? rules : null;
 		}
 
@@ -152,7 +152,7 @@ export class CssUpdater extends RuleLinkList {
 			}
 			if (!crtRule || !crtRule._next) break;
 		}
-		for (const rule of rules) this.parser.updateChildIdx(rule.parentRule);
+		for (const rule of rules) this.#parser.updateChildIdx(rule.parentRule);
 		return rules.length > 0 ? rules : null;
 	}
 

@@ -13,6 +13,8 @@
     --stem-clr: hsl(0, 0%, 70%);
     --box-mgi: 10%;
     --path-hvr-bgc: whitesmoke;
+    --toast-bgc: #333;
+    --toast-txt: rgb(255, 208, 0);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -112,5 +114,31 @@ main {
                 border-radius: 0 0.4em 0.4em 0;
             }
         }
+    }
+}
+
+/* snackbar  */
+output {
+    min-width: 8em;
+    background-color: var(--toast-bgc);
+    color: var(--toast-txt);
+    text-align: center;
+    border-radius: 1em;
+    padding: 0.8em;
+    position: fixed;
+    z-index: 1000;
+    left: 40%;
+    bottom: 1em;
+    width: max-content;
+    translate: 0 200%;
+    animation: in-out 4s ease-out;
+
+}
+
+@keyframes in-out {
+
+    10%,
+    90% {
+        translate: 0 0;
     }
 }

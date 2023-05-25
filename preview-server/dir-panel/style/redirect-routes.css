@@ -78,6 +78,10 @@
             & input {
                 width: 94%;
                 font-size: 1rem;
+
+                &.saved {
+                    border: 1px solid lime;
+                }
             }
 
             & svg {

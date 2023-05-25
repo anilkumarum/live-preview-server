@@ -10,14 +10,14 @@ describe("updateSelector", () => {
         
     }) */
 
-	it("removeTxtNode", () => {
+	it("removeNode", () => {
 		function removeTxtNode(change) {
 			const { rangeOffset, rangeLength } = change;
 			const data = htmlRefresher.removeElementsInRange(rangeOffset, rangeOffset + rangeLength);
-			strictEqual(String(data), "2");
+			strictEqual(String(data), "5,6");
 		}
 
-		const rmchange = { rangeOffset: 35, rangeLength: 17, text: "" };
+		const rmchange = { rangeOffset: 88, rangeLength: 27, text: "" };
 		removeTxtNode(rmchange);
 	});
 

@@ -1,8 +1,8 @@
 import { ServerResponse } from "node:http";
-import { open, readFile } from "node:fs/promises";
+import { open } from "node:fs/promises";
 import { pipeline } from "stream";
 import { fileTypes } from "../utils/mime-type.js";
-import { clientScript, nodeIdsScript } from "../scripts/node-id.js";
+import { clientScript, consoleScript, nodeIdsScript } from "../scripts/node-id.js";
 import { docExtension, extname } from "../utils/file-path.js";
 
 const Doctype = new Uint8Array([
@@ -11,7 +11,7 @@ const Doctype = new Uint8Array([
 ]);
 
 /** @param {string} filePath, @param {ServerResponse} res */
-export async function serveFile(filePath, res) {
+export async function serveFile(filePath, res, isEmbedded) {
 	try {
 		const fd = await open(filePath);
 		if (fd) {
@@ -23,6 +23,7 @@ export async function serveFile(filePath, res) {
 				stream.push(Doctype);
 				stream.push(clientScript);
 				stream.push(nodeIdsScript);
+				//isEmbedded && stream.push(consoleScript); //for embedded preview
 			}
 			pipeline(stream, res, (err) => err && console.log(err));
 		}

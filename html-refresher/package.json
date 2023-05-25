@@ -7,7 +7,7 @@
 	"type": "module",
 	"scripts": {
 		"test": "node --test",
-		"dev": "node index.mjs"
+		"dev": "node index.js"
 	},
 	"keywords": [],
 	"license": "GPL-3.0-only"

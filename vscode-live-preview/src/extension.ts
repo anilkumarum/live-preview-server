@@ -8,7 +8,7 @@ import ConsoleOutput from "./utils/output-channel.js";
 import { launchDebug } from "./utils/debug.js";
 import { Command } from "./utils/constant.js";
 
-const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.path;
+const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
 export async function activate(context: vscode.ExtensionContext) {
 	let port = userConfig.serverPort || 2200;
@@ -66,12 +66,15 @@ export async function activate(context: vscode.ExtensionContext) {
 		// const { PreviewServer } = await import("../../preview-server/server.js");
 		const serverLogger = new ConsoleOutput("LPS server log");
 		const extPath = context.extensionPath;
+		//start preview server
 		previewServer = new PreviewServer(workspaceFolder, extPath, userConfig, serverLogger, userCustom);
-		port = await previewServer.startServer(port).catch((err) => console.error(err));
+		port = await previewServer.startServer(port).catch(async (err) => console.error(err));
+		if (!port) return vscode.window.showErrorMessage("Cannot start server");
+		//find html file in current directory
 		const document = await findHTMLDocument().catch((err) => console.error(err));
 		await new Promise((r) => setTimeout(r, 100));
 
-		if (!document) throw new Error("docPath not available");
+		if (!document) return vscode.window.showErrorMessage("docPath not available");
 		userConfig.liveRefresh && previewServer.parseLiveRefresher(document);
 		toggleDocumentListener();
 		// runCustomCommand("runCompileCommand");

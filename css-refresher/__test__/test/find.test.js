@@ -3,6 +3,7 @@ import { test, describe, it } from "node:test";
 import { document } from "../data/css.js";
 import { CssRefresher } from "../../cssRefresher.js";
 import { findNode } from "../data/snapshot.js";
+import { RuleLinkList } from "../../parser/RuleLinkList.js";
 
 const cssRefresher = new CssRefresher(document);
 const prettyRule = ({ _next, _previous, ...rule }) => JSON.stringify(rule);
@@ -31,6 +32,6 @@ describe("findState", () => {
 test("findCrtDeclaration", (t) => {
 	const position = 75;
 	const { cssRule } = cssRefresher.getRuleAtPosition(position);
-	const propIdx = cssRefresher.getCrtDeclarationIndex(position, cssRule);
+	const propIdx = RuleLinkList.getCrtDeclarationIndex(position, cssRule);
 	strictEqual(propIdx, 0);
 });

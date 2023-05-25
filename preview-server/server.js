@@ -1,9 +1,7 @@
 import { createServer, Server, ServerResponse } from "node:http";
-import { clr } from "./utils/color.js";
 import RouteServer from "./services/route-server.js";
 import { docLangId } from "./utils/file-path.js";
 import { join } from "node:path";
-import { getNextOpenPort } from "./utils/port.js";
 
 /**
  * @typedef change
@@ -28,8 +26,8 @@ const created = (logger, port) => logger.log(`🔴 Preview server running at ${p
 
 let HtmlRefresher, CssRefresher;
 async function loadRefresher() {
-	HtmlRefresher = (await import("../html-refresher/index.mjs")).HtmlRefresher;
-	CssRefresher = (await import("../css-refresher/index.mjs")).CssRefresher;
+	HtmlRefresher = (await import("../html-refresher/index.js")).HtmlRefresher;
+	CssRefresher = (await import("../css-refresher/index.js")).CssRefresher;
 }
 
 export class PreviewServer extends RouteServer {
@@ -59,7 +57,6 @@ export class PreviewServer extends RouteServer {
 		return new Promise((resolve, reject) => {
 			if (this.isRunning) return resolve(port);
 			this.port = port;
-			// port = await getNextOpenPort(port);
 			this.#server = createServer().listen(port, created.bind(null, this.logger, port));
 			this.#server.on("request", this.#onRequest);
 			this.#server.once("error", () => reject("cannot start server at port " + port));

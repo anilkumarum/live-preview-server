@@ -6,8 +6,10 @@ import { createFileExtMap, err404, hasExt } from "../utils/file-path.js";
 import { serveFile } from "./file-serve.js";
 import { errorPage404 } from "../utils/404page.js";
 import { transformTS } from "../utils/tsTranspile.cjs";
+// import { highlightVsLine } from "../utils/highlight.cjs";
 
-const liveScripts = new Set(["/client-hmr.js", "/node-id.js", "/live-refresh.js"]);
+const liveScripts = new Set(["/client-hmr.js", "/live-refresh.js"]);
+const panelPage = "/dir-panel/index.hbs";
 
 export default class RouteServer {
 	extensionPath;
@@ -31,24 +33,27 @@ export default class RouteServer {
 			serveFile(filepath, res);
 		} else {
 			const isNavigate = request.headers["sec-fetch-mode"] === "navigate";
-			this.serveFileOnRoute(urlPath, isNavigate, res);
+			const isEmbedded = request.headers["sec-fetch-dest"] === "iframe";
+			this.serveFileOnRoute(urlPath, isNavigate, isEmbedded, res);
 		}
 	}
 
-	/**@protected @param {string} urlPath, @param {boolean} isNavigate, @param {ServerResponse} res*/
-	async serveFileOnRoute(urlPath, isNavigate, res) {
+	/**@protected @param {string} urlPath, @param {boolean} isNavigate, @param {boolean} isEmbedded, @param {ServerResponse} res*/
+	async serveFileOnRoute(urlPath, isNavigate, isEmbedded, res) {
 		let fileExt = "";
 
 		if (isNavigate) {
 			hasExt(urlPath) || (fileExt = this.docFileExtMap.get(urlPath) || "");
+			if (urlPath === "/paths") return serveFile(path.join(this.extensionPath, panelPage), res);
 			const fstat = await stat(this.cwd + urlPath + fileExt).catch((err) => {
 				errorPage404(urlPath, res);
 				this.logger.log(`[${new Date().toLocaleTimeString()}] ${urlPath} 404 error`);
 			});
 			if (!fstat) return;
+			//TODO add support for index.html file
 			res.setHeader("X-Powered-By", "Live Preview Server");
 			if (fstat.isDirectory() || urlPath === "/paths") {
-				const dirPanelPath = path.join(this.extensionPath, "/dir-panel/index.hbs");
+				const dirPanelPath = path.join(this.extensionPath, panelPage);
 				return serveFile(dirPanelPath, res);
 			}
 			//inject user custom headers
@@ -71,7 +76,7 @@ export default class RouteServer {
 		}
 
 		const filePath = this.cwd + urlPath + fileExt;
-		serveFile(filePath, res);
+		serveFile(filePath, res, isEmbedded);
 	}
 
 	/**@param {ServerResponse} res*/
@@ -113,20 +118,14 @@ export default class RouteServer {
 			} else err404(urlPath, res);
 		});
 		//highlight node in vscode from browser
-		/* 		if (request.method === "PATCH" && request.url.startsWith("/view/highlight-node-vscode")) {
+		if (request.method === "PATCH" && request.url.startsWith("/view/highlight-node-vscode")) {
 			const params = new URLSearchParams(request.url);
 			const nodeId = params.get("node");
 			const htmlRefresher = this.liveRefresher.get(this.cwd + request.headers.referer);
 			if (htmlRefresher) {
 				const node = htmlRefresher.findNodeById(nodeId);
-				const editor = vscode.window.activeTextEditor;
-
-				const positionStart = editor.document.positionAt(node.start);
-				const positionEnd = editor.document.positionAt(node.end);
-				const range = new vscode.Range(positionStart, positionEnd);
-				editor.selection = new vscode.Selection(positionStart, positionEnd);
-				editor.revealRange(range);
+				// highlightVsLine(node.start,node.end);
 			}
-		} */
+		}
 	}
 }

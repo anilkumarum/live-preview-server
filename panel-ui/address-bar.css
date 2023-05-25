@@ -5,6 +5,7 @@
     --input-bgc: #fff;
     --bar-bgc: whitesmoke;
     --btn-hover-bgc: whitesmoke;
+    --menu-bgc: #fff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -152,7 +153,7 @@ summary+menu {
 
 iframe {
     width: 100%;
-    min-height: 70vh;
+    min-height: 100vh;
     border: none;
     background-color: white;
 }
