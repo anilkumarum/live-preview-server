@@ -2,10 +2,10 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { createDirTree, getRedirectRoutes, updateRedirectRoute } from "../utils/dir-panel.js";
-import { createFileExtMap, err404, hasExt } from "../utils/file-path.js";
+import { createFileExtMap, err404, hasExt, sendStyleSheets } from "../utils/file-path.js";
 import { serveFile } from "./file-serve.js";
 import { errorPage404 } from "../utils/404page.js";
-import { transformTS } from "../utils/tsTranspile.cjs";
+import { transformTS } from "../utils/tsTranspile.js";
 // import { highlightVsLine } from "../utils/highlight.cjs";
 
 const liveScripts = new Set(["/client-hmr.js", "/live-refresh.js"]);
@@ -19,6 +19,7 @@ export default class RouteServer {
 	liveRefresher;
 	logger;
 	crtPageUrl;
+	resourceFileMap = new Map();
 	/**@protected @param {string} cwd*/
 	constructor(cwd) {
 		this.cwd = cwd;
@@ -31,7 +32,9 @@ export default class RouteServer {
 		if (liveScripts.has(urlPath)) {
 			const filepath = path.join(this.extensionPath, "scripts", urlPath);
 			serveFile(filepath, res);
-		} else {
+		}
+		// else if (urlPath === "/get-adopted-style-sheets") sendStyleSheets().then((data) => res.end(data));
+		else {
 			const isNavigate = request.headers["sec-fetch-mode"] === "navigate";
 			const isEmbedded = request.headers["sec-fetch-dest"] === "iframe";
 			this.serveFileOnRoute(urlPath, isNavigate, isEmbedded, res);
@@ -50,6 +53,7 @@ export default class RouteServer {
 				this.logger.log(`[${new Date().toLocaleTimeString()}] ${urlPath} 404 error`);
 			});
 			if (!fstat) return;
+			this.resourceFileMap.clear();
 			//TODO add support for index.html file
 			res.setHeader("X-Powered-By", "Live Preview Server");
 			if (fstat.isDirectory() || urlPath === "/paths") {
@@ -77,6 +81,7 @@ export default class RouteServer {
 
 		const filePath = this.cwd + urlPath + fileExt;
 		serveFile(filePath, res, isEmbedded);
+		this.resourceFileMap.set(filePath);
 	}
 
 	/**@param {ServerResponse} res*/

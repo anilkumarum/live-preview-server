@@ -67,7 +67,7 @@ export class PreviewServer extends RouteServer {
 			});
 			this.#server.once("close", () => {
 				this.isRunning = false;
-				this.#res.end();
+				this.#res?.end();
 				this.logger.log("Live Server Stopped");
 				this.logger.dispose();
 			});
@@ -96,7 +96,7 @@ export class PreviewServer extends RouteServer {
 	/** @type {import("node:http").RequestListener} */
 	#onRequest = (request, res) => {
 		const [urlPath, searchParams] = request.url.split("?", 2);
-		if (urlPath === "/ws") {
+		if (urlPath === "/lps-sse") {
 			this.#res = res;
 			return this.#connectClient(res);
 		}
@@ -121,10 +121,13 @@ export class PreviewServer extends RouteServer {
 
 	/** @param {document} textDoc*/
 	reloadOnSave = (textDoc) => {
-		if (this.liveRefresher && this.liveRefresher.has(textDoc.fileName)) {
-			this.liveRefresher.get(textDoc.fileName).reParseOnSave();
+		const absolutePath = textDoc.fileName;
+		if (!this.resourceFileMap.has(absolutePath)) return;
+
+		if (this.liveRefresher && this.liveRefresher.has(absolutePath)) {
+			this.liveRefresher.get(absolutePath).reParseOnSave();
 		}
-		const filePath = this.#getRelativePath(textDoc.fileName);
+		const filePath = this.#getRelativePath(absolutePath);
 		this.#res?.write(`data:${filePath}\n\n`);
 	};
 

@@ -1,4 +1,3 @@
-// const { readFile } = require("node:fs/promises");
 import { readFile } from "node:fs/promises";
 
 const ModuleKind = {

@@ -1,8 +1,8 @@
 {
 	"name": "live-preview-server",
 	"displayName": "Live Preview Server",
-	"version": "0.0.8",
-	"description": "dependency free native nodejs live preview server. embedded live html preview. lightweight and ultra fast",
+	"version": "0.1.1",
+	"description": "Dependency free native nodejs live preview server. Embedded live html preview. lightweight and ultra fast. Only reload fetched files",
 	"publisher": "anilkumarum",
 	"license": "GPL-3.0-only",
 	"icon": "logo.jpeg",
@@ -49,7 +49,7 @@
 	"activationEvents": [
 		"onLanguage:html",
 		"onLanguage:css",
-		"onLanguage:js"
+		"onLanguage:javascript"
 	],
 	"contributes": {
 		"commands": [
@@ -72,6 +72,11 @@
 			{
 				"command": "livePreviewServer.start.firefoxBrowser",
 				"title": "Start preview in firefox browser",
+				"category": "LPS"
+			},
+			{
+				"command": "livePreviewServer.start.PickBrowser",
+				"title": "Pick browser from browser list",
 				"category": "LPS"
 			},
 			{
@@ -151,6 +156,15 @@
 					"default": ".",
 					"description": "Change base directory"
 				},
+				"livePreviewServer.config.statusBarCommand": {
+					"type": "enum",
+					"enum": [
+						"livePreviewServer.start.defaultBrowser",
+						"livePreviewServer.start.PickBrowser"
+					],
+					"default": "livePreviewServer.start.defaultBrowser",
+					"description": "Update status bar onclick command"
+				},
 				"livePreviewServer.config.defaultBrowser": {
 					"enum": [
 						"Chrome",
@@ -166,9 +180,9 @@
 					"default": [
 						"Chrome",
 						"Firefox",
-						"other"
+						"Other"
 					],
-					"description": "Add or remove Browser list in status-bar tooltip"
+					"description": "Add or remove Browser list in tooltip list"
 				},
 				"livePreviewServer.config.updateBrowserPath": {
 					"type": "object",
@@ -183,6 +197,17 @@
 					"type": "boolean",
 					"default": false,
 					"description": "Compile ts. import typescript with .ts extension"
+				},
+				"livePreviewServer.custom.quickPickBrowsers": {
+					"type": "object",
+					"default": {
+						"Brave": "default",
+						"Safari": "default",
+						"Chromium": "default",
+						"Edge": "default",
+						"Vivaldi": "default"
+					},
+					"description": "Add or remove Browser list in quick picks list. Object<browserName, browserPath>"
 				},
 				"livePreviewServer.custom.httpHeaders": {
 					"type": "object",

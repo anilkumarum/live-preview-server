@@ -1,4 +1,4 @@
-//replace this emitemiiter with node.js eventemitter
+//replace this emitemiter with node.js eventemitter
 export class EventEmitter {
 	constructor() {}
 	on(event, cb) {

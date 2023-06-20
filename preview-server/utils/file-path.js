@@ -55,6 +55,26 @@ export async function createFileExtMap(cwd, fileExtMap) {
 	await Promise.all(promises).catch((err) => console.error(err));
 }
 
+export async function sendStyleSheets() {
+	const cssSheets = [];
+	let promises = [];
+	async function walkCssDir(cwd, nestedDir) {
+		const dirents = await readdir(cwd + nestedDir, { withFileTypes: true });
+		for (const dirent of dirents) {
+			const dirPath = nestedDir + "/" + dirent.name;
+			if (dirent.isDirectory) await walkCssDir(dirPath);
+			else if (dirent.name.endsWith(".css")) cssSheets.push("/" + dirPath);
+		}
+	}
+	promises.push(walkCssDir(""));
+	try {
+		await Promise.all(promises);
+		return JSON.stringify(cssSheets);
+	} catch (error) {
+		return error.message;
+	}
+}
+
 /**@param {string} urlPath, @param {ServerResponse} res*/
 export function err404(urlPath, res) {
 	res.writeHead(404);

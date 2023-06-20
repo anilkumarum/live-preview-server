@@ -10,7 +10,11 @@ It is enable by default. You can turn on/off by setting `true/false`.
 ### `livePreviewServer.config.customElementHMR`
 
 Default status : `false`
-toggle `hmr` on custom web components
+Toggle `hmr` on custom web components
+
+> Note:
+> File name must be same as custom element tagName
+> e.g filename for `custom-popup` is `custom-popup.js`
 
 ### `livePreviewServer.config.serverPort`
 
@@ -23,6 +27,15 @@ Default base directory : `current workspace folder`
 Set base directory.
 
 ### `livePreviewServer.config.defaultBrowser`
+
+Change default browser
+
+### `livePreviewServer.config.statusBarCommand`
+
+Default Command: Open Default browser
+command execute on status bar click
+Change statusBar Command
+You can change command to open browser quick pick list
 
 ### `livePreviewServer.config.toolTipBrowsers`
 

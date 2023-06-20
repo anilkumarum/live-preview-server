@@ -1,4 +1,3 @@
-// import { performance } from "node:perf_hooks";
 import * as vscode from "vscode";
 import { userConfig } from "./config.js";
 import { Command, LaunchBrowsers } from "./constant.js";
@@ -11,9 +10,10 @@ class StatusBar {
 	}
 
 	setStartCommand() {
-		this.#statusBarItem.text = `$(globe) Browser`;
+		this.#statusBarItem.text = `$(link-external) Browser`;
+		this.#statusBarItem.color = new vscode.ThemeColor("sideBar.foreground");
 		this.#statusBarItem.tooltip = this.#setToolTip();
-		this.#statusBarItem.command = Command.LaunchDefault;
+		this.#statusBarItem.command = userConfig.statusBarCommand || LaunchBrowsers.Default;
 		this.#statusBarItem.show();
 	}
 
@@ -28,14 +28,15 @@ class StatusBar {
 		//TODO other quickpick item
 		let browsers = userConfig.toolTipBrowsers.map(
 			(browser) =>
-				`&nbsp;&nbsp;&nbsp;&nbsp;[${browser}](command:${LaunchBrowsers[browser ?? Command.LaunchDefault]})`
+				`&nbsp;&nbsp;&nbsp;&nbsp;[${browser}](command:${LaunchBrowsers[browser] || Command.PickBrowser})`
 		);
 
 		return browsers.join("<br>");
 	}
 
 	setCloseCommand() {
-		this.#statusBarItem.text = "Close Server";
+		this.#statusBarItem.text = "$(stop) Stop Server";
+		this.#statusBarItem.color = "orange";
 		this.#statusBarItem.command = Command.CloseServer;
 		this.#statusBarItem.tooltip = "close live preview server";
 	}

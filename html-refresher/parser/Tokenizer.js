@@ -153,13 +153,6 @@ export class Tokenizer extends EventEmitter {
 			if (this.buffer.charCodeAt(this.index - 5) === CharCode.LowerS) this.skipStyleScript();
 		} else if (code === CharCode.Slash) {
 			this.state = State.InSelfClosingTag;
-		} else if (code === CharCode.openingCurlyBracket) {
-			this.sectionStart = this.index + 1;
-			this.fastForwardTo(CharCode.closingCurlyBracket);
-			this.emitData("attrname");
-			this.emitData("attrvalue");
-			this.sectionStart = -1;
-			this.state = State.BeforeAttributeName;
 		} else if (!isWhitespace(code)) {
 			this.state = State.InAttributeName;
 			this.sectionStart = this.index;

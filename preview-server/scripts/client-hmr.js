@@ -1,7 +1,9 @@
 import { liveActions } from "/live-refresh.js";
 
-const evtSource = new EventSource(`http://localhost:${location.port}/ws`);
+const evtSource = new EventSource(`http://localhost:${location.port}/lps-sse`);
 addEventListener("beforeunload", () => evtSource.close());
+
+console.log("%c LPS Hmr connecting...", "color:grey");
 
 /** @param {MessageEvent} event */
 evtSource.onmessage = async (event) => {
@@ -12,26 +14,23 @@ evtSource.onmessage = async (event) => {
 		return liveActions[actionData.action](actionData);
 	}
 	const fileType = data.split(".").pop();
-	updateFiles[fileType] ? updateFiles[fileType](data) : reload();
+	updateFiles[fileType] ? updateFiles[fileType](data) : location.reload();
 };
 evtSource.addEventListener("notice", (event) => {
 	const data = event.data;
 	console.info("%c" + data, "color:cyan");
-	// if(data.startsWith("config"))
+	//TODO if(data.startsWith("config"))
 });
 
-evtSource.addEventListener("pagenav", (event) => {
-	location.assign(event.data);
-});
-evtSource.onerror = () => (showConnectionLost(), evtSource.close());
+evtSource.addEventListener("pagenav", (event) => location.assign(event.data));
 
-function showConnectionLost() {
+evtSource.onerror = function showConnectionLost() {
 	const statusMsg = document.createElement("output");
 	statusMsg.id = "lps-status-info";
 	statusMsg.textContent = "⚠️ Disconnected";
 	document.body.appendChild(statusMsg);
-	console.log(statusMsg);
-}
+	evtSource.close();
+};
 
 const updateFiles = {
 	css: updateCSSSheet,
@@ -79,22 +78,33 @@ function replaceImage(filePath) {
 //%%%%%%%%%% ----- Update CSS File ---------%%%%%%%%%%
 /**@type {Map<string, CSSStyleSheet>} */
 globalThis.liveStyleSheets = new Map();
-const adoptedSheets = new Map();
-// const inlineStyles = new Map();
-
+const adoptedStyleSheets = new Map();
+window.addEventListener("load", setStyleSheets);
 function setStyleSheets() {
 	for (let index = 0; index < document.styleSheets.length; index++) {
 		const styleSheet = document.styleSheets[index];
 		if (styleSheet.ownerNode.tagName === "LINK") {
 			liveStyleSheets.set(new URL(styleSheet.href).pathname, styleSheet);
 		}
-		/* else if (styleSheet.ownerNode.tagName === "STYLE") {
-            const previewId = styleSheet.ownerNode.dataset.previewId;
-            inlineStyles.set(Number(previewId), document.styleSheets[index]);
-        } */
+	}
+
+	/* 	fetch(`/get-adopted-style-sheets`)
+		.then((response) => response.ok && response.json())
+		.then(setAdoptedSheets)
+		.catch((err) => console.error(err)); */
+}
+
+function setAdoptedSheets(styleSheets) {
+	if (!styleSheets) return;
+
+	for (const sheetPath of styleSheets) {
+		if (!liveStyleSheets.has(sheetPath)) {
+			/* import(sheetPath, { assert: { type: "css" } }).then(async (result) => {
+				adoptedStyleSheets.set(sheetPath, result.default);
+			}); */
+		}
 	}
 }
-window.addEventListener("load", setStyleSheets);
 
 /** @param {string} filePath*/
 function updateCSSSheet(filePath) {
@@ -124,35 +134,37 @@ async function swapStyleLinks(filePath) {
 	}
 }
 
-//not for firefox
+//! not for firefox
 /** @param {string} filePath*/
 async function swapStyleSheet(filePath) {
 	//TODO support adoptedSheets
-	/* 	const filename = getFileName(filePath);
+	const filename = getFileName(filePath);
 	let existSheet;
-	if (adoptedSheets.has(filePath)) existSheet = adoptedSheets.get(filePath);
+
+	if (adoptedStyleSheets.has(filePath)) existSheet = adoptedStyleSheets.get(filePath);
 	else {
-		const style = await (await import("./import-css.js")).getImportedCss(filePath);
+		//maybe don't need this
+		/* const style = (await import(filePath, { assert: { type: "css" } })).default;
 		existSheet = document.adoptedStyleSheets.find((sheet) => sheet === style);
 		if (!existSheet) {
 			const customElem = document.querySelector(filename.split(".", 1)[0]);
 			if (customElem && customElem.shadowRoot)
 				existSheet = customElem.shadowRoot.adoptedStyleSheets?.find((sheet) => sheet === style);
-		}
+		} */
 	}
 
 	if (existSheet) {
-		adoptedSheets.set(filePath, existSheet);
+		adoptedStyleSheets.set(filePath, existSheet);
 		try {
 			const response = await fetch(filePath);
 			if (response.ok) {
-				existSheet.replace(response.text());
+				existSheet.replace(await response.text());
 				console.log("%c" + filename + " hot reloaded", "color:dodgerblue");
 			}
 		} catch (error) {
 			console.log(error);
 		}
-	} else reload(); */
+	} else reload();
 }
 
 //$$$$$$$ Update js File $$$$$$$
@@ -167,8 +179,35 @@ async function updateJsModule(filePath) {
 	const filename = filePath.slice(filePath.lastIndexOf("/") + 1);
 
 	//check file is web components file
-	if (checkComponent(filePath)) {
+	if (checkCtmElem && checkComponent(filePath)) {
 		await import(jsModuleUrl).catch((err) => console.error(err));
 		console.log("%c" + filename + "component hot reloaded", "color:yellow");
 	} else reload();
 }
+
+function registerElement() {
+	const defineHandler = {
+		apply: function (target, thisArg, argumentsList) {
+			const [elemTag, Class] = argumentsList;
+			if (customElements.get(elemTag)) {
+				const nodeList = document.querySelectorAll(elemTag);
+				for (const node of nodeList) {
+					const descriptors = Object.getOwnPropertyDescriptors(Class.prototype);
+					Object.defineProperties(node, descriptors);
+					//for HTMLElement
+					// @ts-ignore
+					node.connectedCallback();
+					//for LITELEMENT
+					// node.requestUpdate();
+				}
+				return;
+			}
+			return target.call(thisArg, ...argumentsList);
+		},
+	};
+	const defineProxy = new Proxy(customElements.define, defineHandler);
+	customElements.define = defineProxy;
+	globalThis.register = defineProxy;
+}
+
+checkCtmElem && registerElement();
