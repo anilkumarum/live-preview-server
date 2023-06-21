@@ -21,9 +21,6 @@ import { join } from "node:path";
  * @property {Function} getWordRangeAtPosition
  * @property {Function} offsetAt
  */
-
-const created = (logger, port) => logger.log(`🔴 Preview server running at ${port} port`);
-
 let HtmlRefresher, CssRefresher;
 async function loadRefresher() {
 	HtmlRefresher = (await import("../html-refresher/index.js")).HtmlRefresher;
@@ -57,9 +54,15 @@ export class PreviewServer extends RouteServer {
 		return new Promise((resolve, reject) => {
 			if (this.isRunning) return resolve(port);
 			this.port = port;
-			this.#server = createServer().listen(port, created.bind(null, this.logger, port));
+			this.#server = createServer().listen(port, () => {
+				this.logger.create("LPS server log");
+				this.logger.log(`🔴 Preview server running at ${port} port`);
+			});
 			this.#server.on("request", this.#onRequest);
-			this.#server.once("error", () => reject("cannot start server at port " + port));
+			this.#server.once("error", (err) => {
+				this.#server.close();
+				reject(err["code"]);
+			});
 			this.#server.once("listening", () => {
 				this.isRunning = true;
 				this.logger.log(`Local: http://localhost:${port}/paths`);
@@ -71,6 +74,7 @@ export class PreviewServer extends RouteServer {
 				this.logger.log("Live Server Stopped");
 				this.logger.dispose();
 			});
+			process.once("exit", this.#server.close);
 		});
 	}
 

@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { stat } from "node:fs/promises";
-import path from "node:path";
+import { join } from "node:path";
 import { createDirTree, getRedirectRoutes, updateRedirectRoute } from "../utils/dir-panel.js";
 import { createFileExtMap, err404, hasExt, sendStyleSheets } from "../utils/file-path.js";
 import { serveFile } from "./file-serve.js";
@@ -30,7 +30,7 @@ export default class RouteServer {
 	/**@protected @param {IncomingMessage}request,  @param {ServerResponse} res*/
 	handleGetRequest(request, res, urlPath) {
 		if (liveScripts.has(urlPath)) {
-			const filepath = path.join(this.extensionPath, "scripts", urlPath);
+			const filepath = join(this.extensionPath, "scripts", urlPath);
 			serveFile(filepath, res);
 		}
 		// else if (urlPath === "/get-adopted-style-sheets") sendStyleSheets().then((data) => res.end(data));
@@ -47,8 +47,8 @@ export default class RouteServer {
 
 		if (isNavigate) {
 			hasExt(urlPath) || (fileExt = this.docFileExtMap.get(urlPath) || "");
-			if (urlPath === "/paths") return serveFile(path.join(this.extensionPath, panelPage), res);
-			const fstat = await stat(this.cwd + urlPath + fileExt).catch((err) => {
+			if (urlPath === "/paths") return serveFile(join(this.extensionPath, panelPage), res);
+			const fstat = await stat(join(this.cwd, urlPath + fileExt)).catch((err) => {
 				errorPage404(urlPath, res);
 				this.logger.log(`[${new Date().toLocaleTimeString()}] ${urlPath} 404 error`);
 			});
@@ -57,7 +57,7 @@ export default class RouteServer {
 			//TODO add support for index.html file
 			res.setHeader("X-Powered-By", "Live Preview Server");
 			if (fstat.isDirectory() || urlPath === "/paths") {
-				const dirPanelPath = path.join(this.extensionPath, panelPage);
+				const dirPanelPath = join(this.extensionPath, panelPage);
 				return serveFile(dirPanelPath, res);
 			}
 			//inject user custom headers
@@ -65,7 +65,7 @@ export default class RouteServer {
 			if (urlPath !== this.crtPageUrl) this.logger.log(`[${new Date().toLocaleTimeString()}] ${urlPath}`);
 			this.crtPageUrl = urlPath;
 		} else if (urlPath.startsWith("/dir-panel")) {
-			const filePath = this.extensionPath + urlPath;
+			const filePath = join(this.extensionPath, urlPath);
 			return serveFile(filePath, res);
 		} else if (urlPath.startsWith("/dir-data-request")) {
 			return await this.#sendDirPanelData(urlPath, res);
@@ -79,7 +79,7 @@ export default class RouteServer {
 			}
 		}
 
-		const filePath = this.cwd + urlPath + fileExt;
+		const filePath = join(this.cwd, urlPath + fileExt);
 		serveFile(filePath, res, isEmbedded);
 		this.resourceFileMap.set(filePath);
 	}

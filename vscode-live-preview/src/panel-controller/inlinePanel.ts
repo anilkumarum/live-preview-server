@@ -45,7 +45,8 @@ export class InlinePanel {
 		const jsSrc = panel.webview.asWebviewUri(jsFile);
 		// set HTML content
 		panel.webview.html = getHTMLContent(jsSrc, cssSrc, iframeUrl, port);
-		InlinePanel.console = new ConsoleOutput("LPS Preview Console");
+		InlinePanel.console = new ConsoleOutput();
+		InlinePanel.console.create("LPS Preview Console");
 		//navigation controller
 		new WebComm(panel.webview, cwd, InlinePanel.console);
 	}

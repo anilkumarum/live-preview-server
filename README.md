@@ -7,6 +7,7 @@
 - Link multiple custom routes on any file url [know more]()
 - Option to choose browser in status bar [know more]()
 - Typescript support out of box [know more]().
+- Trigger reload only fetched files not all workspace's files.
 - 10x-30x less memory consumption due to dynamic loading and no dependency.
 
 ⚠️ WARNING: This extension is still under development! ⚠️
@@ -36,7 +37,7 @@ live refresh is the reason for writing whole extension from scratch.
 
 ### Reload only fetched files
 
-Other live server reload webpage on any file changed in open workspace.
+Other live server reload webpage on any file changed in open workspace.\
 **Live preview server** reload only fetched files
 
 ### Page url path completion intellisense

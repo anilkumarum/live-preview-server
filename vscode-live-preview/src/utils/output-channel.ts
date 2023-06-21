@@ -12,7 +12,9 @@ const userLogLevel = OutputLevel.error;
 export default class ConsoleOutput {
 	#msgChannel: vscode.OutputChannel;
 
-	constructor(channel) {
+	constructor() {}
+
+	create(channel) {
 		this.#msgChannel = vscode.window.createOutputChannel(channel, "javascript");
 	}
 
@@ -22,10 +24,11 @@ export default class ConsoleOutput {
 	}
 
 	log(msg: string) {
-		this.#msgChannel.appendLine(msg);
+		this.#msgChannel?.appendLine(msg);
 	}
 
 	dispose() {
 		this.#msgChannel.dispose();
+		this.#msgChannel = null;
 	}
 }

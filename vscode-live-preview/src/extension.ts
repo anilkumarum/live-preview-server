@@ -13,31 +13,39 @@ const workspaceFolder = vscode.workspace.workspaceFolders[0].uri.fsPath;
 
 export async function activate(context: vscode.ExtensionContext) {
 	let port = userConfig.serverPort || 2200;
-	let previewServer;
+	var previewServer;
 
 	for (const browser in LaunchBrowsers) {
 		const disposableBrowser = vscode.commands.registerCommand(LaunchBrowsers[browser], async () => {
-			const docPath = await startPreviewServer();
-			openBrowser(browser, `${port}${docPath}`);
-			statusBar.setCloseCommand();
+			try {
+				const docPath = await startPreviewServer();
+				openBrowser(browser, `${port}${docPath}`);
+				statusBar.setCloseCommand();
+			} catch (error) {}
 		});
 		context.subscriptions.push(disposableBrowser);
 	}
 
 	const disposablePanel = vscode.commands.registerCommand(Command.InlinePreview, async () => {
-		const docPath = await startPreviewServer();
-		InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder, port, closePreview);
+		try {
+			const docPath = await startPreviewServer();
+			InlinePanel.openPanel(context.extensionUri, docPath, workspaceFolder, port, closePreview);
+		} catch (error) {}
 	});
 
-	const disposableServer = vscode.commands.registerCommand(Command.StartServer, async () => {
-		await startPreviewServer();
-		statusBar.setCloseCommand();
+	const disposableServer = vscode.commands.registerCommand(Command.StartServer, () => {
+		try {
+			startPreviewServer();
+			statusBar.setCloseCommand();
+		} catch (error) {}
 	});
 
 	const disposableDebug = vscode.commands.registerCommand(Command.DebugServer, async () => {
-		const docPath = await startPreviewServer();
-		await launchDebug(workspaceFolder, port, docPath);
-		statusBar.setCloseCommand();
+		try {
+			const docPath = await startPreviewServer();
+			await launchDebug(workspaceFolder, port, docPath);
+			statusBar.setCloseCommand();
+		} catch (error) {}
 	});
 
 	const disposableQuickpick = vscode.commands.registerCommand(Command.PickBrowser, showQuickPick);
@@ -56,26 +64,37 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(disposableClose);
 	context.subscriptions.push(disposableOnConfig);
 
-	async function startPreviewServer() {
+	async function startPreviewServer(): Promise<string> {
 		const { PreviewServer } = require("../../preview-server/build/server.js");
 		//const { PreviewServer } = await import("../../preview-server/server.js");
-		const serverLogger = new ConsoleOutput("LPS server log");
+		const serverLogger = new ConsoleOutput();
 		const extPath = context.extensionPath;
 		//start preview server
 		previewServer = new PreviewServer(workspaceFolder, extPath, userConfig, serverLogger, userCustom);
-		port = await previewServer.startServer(port).catch(async (err) => console.error(err));
-		if (!port) return vscode.window.showErrorMessage("Cannot start server");
+		return new Promise((resolve, reject) => {
+			previewServer.startServer(port).then(getHtmlFile.bind(null, resolve)).catch(errorHandler);
 
-		//find html file in current directory
-		const document = await findHTMLDocument().catch((err) => console.error(err));
-		await new Promise((r) => setTimeout(r, 100));
+			async function errorHandler(error: string) {
+				if (error === "EADDRINUSE")
+					await previewServer.startServer(++port).then(getHtmlFile.bind(null, resolve)).catch(errorHandler);
+				else vscode.window.showErrorMessage("Cannot start server at port" + port), reject();
+			}
+		});
+	}
 
-		if (!document) return vscode.window.showErrorMessage("docPath not available");
-		userConfig.liveRefresh && previewServer.parseLiveRefresher(document);
-		toggleDocumentListener();
-		// runCustomCommand("runCompileCommand");
-
-		return document.fileName.slice(workspaceFolder.length);
+	async function getHtmlFile(resolve: Function) {
+		let htmlFilePath: string;
+		try {
+			const document = await findHTMLDocument();
+			userConfig.liveRefresh && previewServer.parseLiveRefresher(document);
+			htmlFilePath = document.fileName.slice(workspaceFolder.length);
+		} catch (error) {
+			vscode.window.showErrorMessage("html file not found. Preview Server start without html file");
+		} finally {
+			//runCustomCommand("runCompileCommand");
+			toggleDocumentListener();
+			resolve(htmlFilePath);
+		}
 	}
 
 	function toggleDocumentListener(doDispose = false) {
@@ -130,4 +149,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 }
 
-export function deactivate() {}
+export function deactivate() {
+	//@ts-ignore
+	previewServer?.closeServer();
+}
